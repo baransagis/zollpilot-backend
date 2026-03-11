@@ -1,0 +1,58 @@
+{
+  "families": [
+    {
+      "id": "schraube",
+      "keywords": ["schraube", "gewindeschraube", "zylinderschraube", "bolzen", "sechskantschraube"],
+      "patterns": ["\\bm\\d+(?:x\\d+(?:[.,]\\d+)?)?\\b", "\\bdin\\s*933\\b", "\\bdin\\s*912\\b"],
+      "priority": 2
+    },
+    {
+      "id": "mutter",
+      "keywords": ["mutter", "sechskantmutter", "sicherungsmutter", "flanschmutter"],
+      "patterns": ["\\bdin\\s*934\\b", "\\biso\\s*4032\\b"],
+      "priority": 1
+    },
+    {
+      "id": "lager",
+      "keywords": ["lager", "kugellager", "rollenlager", "nadellager", "wzl"],
+      "patterns": ["\\b6\\d{2,4}\\b", "\\bskf\\b", "\\bfag\\b"],
+      "priority": 1
+    },
+    {
+      "id": "o_ring",
+      "keywords": ["o_ring", "oring", "dichtring", "o-ring"],
+      "patterns": ["\\b\\d+(?:[.,]\\d+)?x\\d+(?:[.,]\\d+)?mm\\b"],
+      "priority": 2
+    },
+    {
+      "id": "wellendichtring",
+      "keywords": ["wellendichtring", "simmerring", "radialwellendichtring", "rwdr"],
+      "patterns": ["\\b\\d+(?:[.,]\\d+)?x\\d+(?:[.,]\\d+)?x\\d+(?:[.,]\\d+)?mm\\b"],
+      "priority": 2
+    },
+    {
+      "id": "motor",
+      "keywords": ["motor", "servomotor", "asynchronmotor", "elektromotor"],
+      "patterns": ["\\bkw\\b", "\\brpm\\b"],
+      "priority": 1
+    },
+    {
+      "id": "getriebemotor",
+      "keywords": ["getriebemotor", "gearmotor", "gt-motor", "ka37", "r37"],
+      "patterns": ["\\bka\\d{2}\\w*\\b", "\\bsew\\b"],
+      "priority": 3
+    },
+    {
+      "id": "kettenrad",
+      "keywords": ["kettenrad", "ritzel", "sprocket", "zahnkranz"],
+      "patterns": ["\\b\\d{2}b-?\\d+\\b"],
+      "priority": 1
+    },
+    {
+      "id": "pneumatikzylinder",
+      "keywords": ["pneumatikzylinder", "pn-zylinder", "zylinder", "druckluftzylinder"],
+      "patterns": ["\\bbar\\b", "\\bhub\\b"],
+      "priority": 1
+    }
+  ]
+}
