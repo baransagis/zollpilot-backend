@@ -81,10 +81,10 @@ Base path: `/api/v1`
 - `GET /health`
 - `GET /catalog/families`
 
-## Static Results UI
+## Static Upload UI
 
-- `GET /ui/results` (or `/ui/results.html`)
-- Reads from `GET /test-resource-csv` and renders a modern readable dashboard view.
+- `GET /` (or `/ui`, `/ui/upload`)
+- Uploads a CSV to `POST /api/v1/classify/upload-csv` and renders the returned JSON results in a table with raw JSON fallback.
 
 ## Example JSON Request
 

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CSV Classification Upload</title>
+  <link rel="stylesheet" href="/static/upload.css">
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <header class="hero">
+        <p class="eyebrow">CN/HS Candidate PoC</p>
+        <h1>Upload CSV for Candidate Classification</h1>
+        <p class="subtitle">Upload your CSV and get clear CN/HS candidate suggestions with confidence guidance.</p>
+      </header>
+
+      <section class="upload-block" aria-labelledby="uploadLabel">
+        <h2 id="uploadLabel">CSV Upload</h2>
+
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Drop CSV file here or open file picker">
+          <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
+          <p class="drop-title">Drop a CSV file here</p>
+          <p class="drop-subtitle">or click to select a file</p>
+          <p id="selectedFile" class="file-name">No file selected</p>
+        </div>
+
+        <div class="actions">
+          <button id="uploadBtn" class="btn btn-primary" type="button">Upload CSV</button>
+          <button id="clearBtn" class="btn btn-secondary" type="button">Clear</button>
+        </div>
+
+        <p class="helper">Required columns: <strong>Materialnummer</strong>, <strong>Kurztext</strong>, <strong>Einkaufsbestelltext</strong>. Delimiter can be <code>;</code> or <code>,</code>.</p>
+        <p id="status" class="status" aria-live="polite">Select a CSV file to begin.</p>
+      </section>
+
+      <section id="summarySection" class="summary" hidden>
+        <h2>Upload Summary</h2>
+        <div class="summary-grid">
+          <article class="summary-item">
+            <p class="summary-label">File</p>
+            <p id="summaryFile" class="summary-value">-</p>
+          </article>
+          <article class="summary-item">
+            <p class="summary-label">Returned Rows</p>
+            <p id="summaryRows" class="summary-value">0</p>
+          </article>
+          <article class="summary-item">
+            <p class="summary-label">Average Confidence</p>
+            <p id="summaryConfidence" class="summary-value">0%</p>
+          </article>
+          <article class="summary-item">
+            <p class="summary-label">State</p>
+            <p id="summaryState" class="summary-value">-</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="resultsSection" class="results" hidden>
+        <h2>Classification Results</h2>
+        <div id="resultsGrid" class="results-grid"></div>
+      </section>
+
+      <section id="emptyState" class="empty-state">
+        <h2>No Results Yet</h2>
+        <p>Upload a CSV file to see row-by-row results.</p>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/upload.js" defer></script>
+</body>
+</html>
