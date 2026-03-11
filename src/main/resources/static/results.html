@@ -1,0 +1,840 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CN Candidate Results</title>
+  <style>
+    :root {
+      --bg-top: #f5f8fb;
+      --bg-bottom: #eaf2ef;
+      --ink-strong: #16242f;
+      --ink-muted: #5f717f;
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-border: rgba(15, 45, 66, 0.12);
+      --teal: #0f766e;
+      --teal-soft: #d5f2ed;
+      --amber: #d97706;
+      --amber-soft: #fff1d4;
+      --rose: #be123c;
+      --rose-soft: #ffe3ea;
+      --slate: #355469;
+      --shadow: 0 16px 40px rgba(15, 30, 48, 0.09);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink-strong);
+      background: linear-gradient(170deg, var(--bg-top), var(--bg-bottom));
+      font-family: "Avenir Next", "Segoe UI", "Trebuchet MS", "Helvetica Neue", sans-serif;
+      line-height: 1.45;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    .shape {
+      position: fixed;
+      border-radius: 999px;
+      filter: blur(1px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.42;
+    }
+
+    .shape-a {
+      top: -120px;
+      right: -60px;
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle at 30% 35%, #68d5c4, rgba(104, 213, 196, 0));
+    }
+
+    .shape-b {
+      bottom: -160px;
+      left: -80px;
+      width: 440px;
+      height: 440px;
+      background: radial-gradient(circle at 65% 35%, #ffcc7a, rgba(255, 204, 122, 0));
+    }
+
+    .app {
+      width: min(1220px, 92vw);
+      margin: 34px auto 64px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 26px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      backdrop-filter: blur(8px);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--teal);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.4vw, 2.1rem);
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      color: var(--ink-muted);
+      max-width: 760px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 10px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 18px;
+      font-weight: 700;
+      font-size: 0.92rem;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(130deg, #0f766e, #14857c);
+      box-shadow: 0 10px 20px rgba(15, 118, 110, 0.24);
+      transition: transform 0.16s ease, box-shadow 0.16s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(15, 118, 110, 0.3);
+    }
+
+    .btn:disabled {
+      cursor: wait;
+      opacity: 0.7;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .meta {
+      margin: 0;
+      color: var(--ink-muted);
+      font-size: 0.87rem;
+      text-align: right;
+    }
+
+    .summary {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+    }
+
+    .summary-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-md);
+      padding: 14px 14px 12px;
+      box-shadow: 0 10px 24px rgba(20, 36, 56, 0.05);
+      min-height: 90px;
+    }
+
+    .summary-card dt {
+      margin: 0;
+      color: var(--ink-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+
+    .summary-card dd {
+      margin: 10px 0 0;
+      font-size: 1.58rem;
+      font-weight: 760;
+      letter-spacing: -0.03em;
+    }
+
+    .controls {
+      margin-top: 16px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      display: grid;
+      grid-template-columns: 1.5fr 190px;
+      gap: 12px;
+      box-shadow: 0 10px 24px rgba(20, 36, 56, 0.05);
+    }
+
+    .control {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: var(--ink-muted);
+      font-size: 0.83rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .control input,
+    .control select {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid #bfd0db;
+      background: #fff;
+      min-height: 42px;
+      padding: 0 12px;
+      color: var(--ink-strong);
+      font-size: 0.95rem;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .control input:focus,
+    .control select:focus {
+      border-color: #3d8f99;
+      box-shadow: 0 0 0 4px rgba(77, 162, 172, 0.14);
+      outline: none;
+    }
+
+    .status {
+      margin-top: 14px;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      background: #eef3f7;
+      color: #395064;
+      border: 1px solid #d8e1e8;
+      transition: all 0.2s ease;
+    }
+
+    .status.ok {
+      background: #e8f8f4;
+      border-color: #bee7dd;
+      color: #165348;
+    }
+
+    .status.error {
+      background: #fff0f3;
+      border-color: #f4cad5;
+      color: #8b1f3f;
+    }
+
+    .results {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+      gap: 14px;
+    }
+
+    .result-card {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius-md);
+      box-shadow: 0 12px 30px rgba(18, 34, 53, 0.07);
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      animation: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: var(--delay, 0ms);
+    }
+
+    .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .head h2 {
+      margin: 0;
+      font-size: 1.03rem;
+      line-height: 1.3;
+      letter-spacing: -0.015em;
+    }
+
+    .material-number {
+      font-size: 0.85rem;
+      color: var(--ink-muted);
+      margin-top: 3px;
+    }
+
+    .badge {
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 760;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+
+    .badge.high {
+      background: var(--teal-soft);
+      color: #14584f;
+      border-color: #a5ddd2;
+    }
+
+    .badge.medium {
+      background: var(--amber-soft);
+      color: #8a5b10;
+      border-color: #f2d39b;
+    }
+
+    .badge.low {
+      background: var(--rose-soft);
+      color: #8b2442;
+      border-color: #f1bfcc;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #edf3f8;
+      color: #2d4d63;
+      font-size: 0.77rem;
+      font-weight: 640;
+      border: 1px solid #d7e3eb;
+    }
+
+    .chip.empty {
+      color: #6f8798;
+      background: #f4f8fb;
+    }
+
+    .muted {
+      margin: 0;
+      color: var(--ink-muted);
+      font-size: 0.87rem;
+    }
+
+    details {
+      border: 1px solid #dde7ef;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: #f9fcff;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: #395064;
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    details code {
+      display: block;
+      margin-top: 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: "SF Mono", "Consolas", "Courier New", monospace;
+      color: #1f3a4f;
+      font-size: 0.81rem;
+      background: #eef5fa;
+      border: 1px solid #d6e6f2;
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .attr-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .attr h3,
+    .candidates h3,
+    .missing h3 {
+      margin: 0 0 6px;
+      font-size: 0.76rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #496074;
+    }
+
+    .candidate-list,
+    .missing-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+    }
+
+    .candidate-item {
+      border: 1px solid #d8e6f1;
+      border-radius: 11px;
+      background: #f8fcff;
+      padding: 8px;
+    }
+
+    .candidate-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #2e4a5f;
+    }
+
+    .candidate-row strong {
+      font-size: 0.83rem;
+      letter-spacing: 0.01em;
+    }
+
+    .score {
+      font-weight: 760;
+      color: #103950;
+    }
+
+    .bar {
+      margin: 7px 0;
+      width: 100%;
+      height: 7px;
+      background: #dce8f2;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #1d8a90, #1677a0);
+      transition: width 0.3s ease;
+    }
+
+    .candidate-label {
+      margin: 0;
+      font-size: 0.84rem;
+      color: #24465d;
+      font-weight: 650;
+    }
+
+    .candidate-reasons {
+      margin: 6px 0 0;
+      font-size: 0.79rem;
+      color: #4f6778;
+    }
+
+    .missing-item {
+      border-left: 3px solid #efc073;
+      padding: 4px 8px;
+      background: #fff9ef;
+      border-radius: 0 8px 8px 0;
+      color: #75542b;
+      font-size: 0.82rem;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      border: 1px dashed #bfd0db;
+      border-radius: 12px;
+      padding: 22px;
+      text-align: center;
+      color: var(--ink-muted);
+      background: rgba(255, 255, 255, 0.66);
+    }
+
+    .skeleton {
+      min-height: 180px;
+      position: relative;
+      overflow: hidden;
+      border-color: #dde6ee;
+      background: #f3f7fa;
+    }
+
+    .skeleton::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, rgba(243, 247, 250, 0), rgba(255, 255, 255, 0.7), rgba(243, 247, 250, 0));
+      animation: shimmer 1.1s infinite;
+    }
+
+    @keyframes shimmer {
+      to {
+        transform: translateX(100%);
+      }
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 860px) {
+      .hero {
+        flex-direction: column;
+      }
+
+      .hero-actions {
+        align-items: flex-start;
+      }
+
+      .meta {
+        text-align: left;
+      }
+
+      .controls {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shape shape-a"></div>
+  <div class="shape shape-b"></div>
+
+  <main class="app">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">CN/HS Candidate PoC</p>
+        <h1>Resource CSV Classification Results</h1>
+        <p>Human-friendly view of <code>GET /test-resource-csv</code> with candidate ranking, confidence, extracted attributes, and missing information hints.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="reloadBtn" class="btn" type="button">Reload Results</button>
+        <p id="lastRefresh" class="meta">Last refresh: -</p>
+      </div>
+    </section>
+
+    <section id="summary" class="summary" aria-live="polite"></section>
+
+    <section class="controls">
+      <label class="control">
+        Search
+        <input id="searchInput" type="search" placeholder="material number, text, family, candidate code">
+      </label>
+      <label class="control">
+        Confidence
+        <select id="confidenceFilter">
+          <option value="all">All</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+      </label>
+    </section>
+
+    <p id="status" class="status">Waiting for first load...</p>
+
+    <section id="results" class="results" aria-live="polite"></section>
+  </main>
+
+  <script>
+    (() => {
+      const endpoint = "/test-resource-csv";
+      const state = {
+        rows: [],
+        filtered: []
+      };
+
+      const refs = {
+        summary: document.getElementById("summary"),
+        results: document.getElementById("results"),
+        status: document.getElementById("status"),
+        reloadBtn: document.getElementById("reloadBtn"),
+        lastRefresh: document.getElementById("lastRefresh"),
+        searchInput: document.getElementById("searchInput"),
+        confidenceFilter: document.getElementById("confidenceFilter")
+      };
+
+      let searchTimer;
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function clampScore(value) {
+        const num = Number(value);
+        if (Number.isNaN(num)) return 0;
+        return Math.max(0, Math.min(100, num));
+      }
+
+      function formatScore(value) {
+        const num = Number(value);
+        return Number.isNaN(num) ? "0.0" : num.toFixed(1);
+      }
+
+      function setStatus(message, type = "") {
+        refs.status.textContent = message;
+        refs.status.className = `status ${type}`.trim();
+      }
+
+      function chips(values) {
+        if (!Array.isArray(values) || values.length === 0) {
+          return '<span class="chip empty">n/a</span>';
+        }
+
+        return values
+          .slice(0, 8)
+          .map((value) => `<span class="chip">${escapeHtml(value)}</span>`)
+          .join("");
+      }
+
+      function renderSummary(allRows, shownRows) {
+        const confidenceCount = shownRows.reduce((acc, row) => {
+          const key = (row.confidence || "unknown").toLowerCase();
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+
+        const familyCount = shownRows.reduce((acc, row) => {
+          const key = row.normalizedFamily || "unknown";
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {});
+
+        const topFamily = Object.entries(familyCount)
+          .sort((a, b) => b[1] - a[1])[0];
+
+        const avgTopScore = shownRows.length === 0
+          ? 0
+          : shownRows
+              .map((row) => Number(row.candidates?.[0]?.score || 0))
+              .reduce((sum, value) => sum + value, 0) / shownRows.length;
+
+        const cards = [
+          ["Rows Loaded", allRows.length],
+          ["Rows Shown", shownRows.length],
+          ["High Confidence", confidenceCount.high || 0],
+          ["Medium Confidence", confidenceCount.medium || 0],
+          ["Low Confidence", confidenceCount.low || 0],
+          ["Top Family", topFamily ? `${topFamily[0]} (${topFamily[1]})` : "n/a"],
+          ["Avg Top Score", `${avgTopScore.toFixed(1)}`]
+        ];
+
+        refs.summary.innerHTML = cards
+          .map(([label, value]) => `
+            <dl class="summary-card">
+              <dt>${escapeHtml(label)}</dt>
+              <dd>${escapeHtml(value)}</dd>
+            </dl>
+          `)
+          .join("");
+      }
+
+      function attributeSection(label, values) {
+        return `
+          <div class="attr">
+            <h3>${escapeHtml(label)}</h3>
+            <div class="chips">${chips(values)}</div>
+          </div>
+        `;
+      }
+
+      function buildCard(row, index) {
+        const confidence = String(row.confidence || "low").toLowerCase();
+        const family = row.normalizedFamily || "unknown";
+        const topCandidate = row.candidates?.[0];
+
+        const candidatesHtml = Array.isArray(row.candidates) && row.candidates.length > 0
+          ? row.candidates.map((candidate) => {
+              const reasons = Array.isArray(candidate.reasons) ? candidate.reasons : [];
+              return `
+                <li class="candidate-item">
+                  <div class="candidate-row">
+                    <strong>${escapeHtml(candidate.code || "n/a")}</strong>
+                    <span class="score">${formatScore(candidate.score)}</span>
+                  </div>
+                  <div class="bar"><span style="width:${clampScore(candidate.score)}%"></span></div>
+                  <p class="candidate-label">${escapeHtml(candidate.label || "")}</p>
+                  <p class="candidate-reasons">${reasons.map(escapeHtml).join(" | ") || "No reasons provided"}</p>
+                </li>
+              `;
+            }).join("")
+          : '<li class="candidate-item"><p class="muted">No candidates returned.</p></li>';
+
+        const missing = Array.isArray(row.missingInformation) ? row.missingInformation : [];
+        const missingHtml = missing.length > 0
+          ? missing.map((item) => `<li class="missing-item">${escapeHtml(item)}</li>`).join("")
+          : '<li class="missing-item">No additional missing information flagged.</li>';
+
+        const attributes = row.attributes || {};
+
+        return `
+          <article class="result-card" style="--delay: ${index * 36}ms;">
+            <header class="head">
+              <div>
+                <h2>${escapeHtml(row.shortText || "(no short text)")}</h2>
+                <p class="material-number">Material ${escapeHtml(row.materialNumber || "n/a")}</p>
+              </div>
+              <span class="badge ${escapeHtml(confidence)}">${escapeHtml(confidence)}</span>
+            </header>
+
+            <div class="chips">
+              <span class="chip">Family: ${escapeHtml(family)}</span>
+              <span class="chip">Top: ${escapeHtml(topCandidate?.code || "n/a")}</span>
+              <span class="chip">Top score: ${formatScore(topCandidate?.score || 0)}</span>
+            </div>
+
+            <p class="muted">${escapeHtml(row.purchaseText || "")}</p>
+
+            <details>
+              <summary>Normalized text</summary>
+              <code>${escapeHtml(row.normalizedText || "")}</code>
+            </details>
+
+            <section class="candidates">
+              <h3>Top Candidates</h3>
+              <ul class="candidate-list">${candidatesHtml}</ul>
+            </section>
+
+            <section class="attr-grid">
+              ${attributeSection("Dimensions", attributes.dimensions)}
+              ${attributeSection("Norms", attributes.norms)}
+              ${attributeSection("Material hints", attributes.materialHints)}
+              ${attributeSection("Hardness hints", attributes.hardnessHints)}
+              ${attributeSection("Model tokens", attributes.modelTokens)}
+              ${attributeSection("Surface hints", attributes.surfaceHints)}
+            </section>
+
+            <section class="missing">
+              <h3>Missing Information</h3>
+              <ul class="missing-list">${missingHtml}</ul>
+            </section>
+          </article>
+        `;
+      }
+
+      function renderResults(rows) {
+        if (rows.length === 0) {
+          refs.results.innerHTML = '<div class="empty-state">No rows match the current filters.</div>';
+          return;
+        }
+
+        refs.results.innerHTML = rows.map((row, index) => buildCard(row, index)).join("");
+      }
+
+      function applyFilters() {
+        const query = refs.searchInput.value.trim().toLowerCase();
+        const confidence = refs.confidenceFilter.value;
+
+        state.filtered = state.rows.filter((row) => {
+          const confidenceMatch = confidence === "all" || String(row.confidence || "").toLowerCase() === confidence;
+          if (!confidenceMatch) {
+            return false;
+          }
+
+          if (!query) {
+            return true;
+          }
+
+          const haystack = [
+            row.materialNumber,
+            row.shortText,
+            row.purchaseText,
+            row.normalizedText,
+            row.normalizedFamily,
+            ...(row.candidates || []).flatMap((candidate) => [candidate.code, candidate.label])
+          ]
+            .map((value) => String(value || "").toLowerCase())
+            .join(" ");
+
+          return haystack.includes(query);
+        });
+
+        renderSummary(state.rows, state.filtered);
+        renderResults(state.filtered);
+      }
+
+      function showLoading() {
+        refs.results.innerHTML = [0, 1, 2].map(() => '<article class="result-card skeleton"></article>').join("");
+      }
+
+      async function loadData() {
+        refs.reloadBtn.disabled = true;
+        showLoading();
+        setStatus(`Loading data from ${endpoint} ...`);
+
+        try {
+          const response = await fetch(endpoint, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const payload = await response.json();
+          if (!Array.isArray(payload)) {
+            throw new Error("Endpoint did not return a JSON array.");
+          }
+
+          state.rows = payload;
+          applyFilters();
+
+          const now = new Date();
+          refs.lastRefresh.textContent = `Last refresh: ${now.toLocaleString()}`;
+          setStatus(`Loaded ${state.rows.length} rows from ${endpoint}.`, "ok");
+        } catch (error) {
+          refs.summary.innerHTML = "";
+          refs.results.innerHTML = '<div class="empty-state">Could not load data. Check backend status and endpoint path.</div>';
+          const message = error instanceof Error ? error.message : String(error);
+          setStatus(`Failed to load results: ${message}`, "error");
+        } finally {
+          refs.reloadBtn.disabled = false;
+        }
+      }
+
+      refs.reloadBtn.addEventListener("click", loadData);
+      refs.confidenceFilter.addEventListener("change", applyFilters);
+      refs.searchInput.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyFilters, 120);
+      });
+
+      loadData();
+    })();
+  </script>
+</body>
+</html>

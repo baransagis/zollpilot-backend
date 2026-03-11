@@ -81,6 +81,11 @@ Base path: `/api/v1`
 - `GET /health`
 - `GET /catalog/families`
 
+## Static Results UI
+
+- `GET /ui/results` (or `/ui/results.html`)
+- Reads from `GET /test-resource-csv` and renders a modern readable dashboard view.
+
 ## Example JSON Request
 
 ```json
