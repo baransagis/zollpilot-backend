@@ -58,9 +58,9 @@ fun Route.classificationRoutes(
                 part.dispose.invoke()
             }
 
-            val bytes = payload ?: throw CsvParsingException("No CSV file found in multipart upload.")
+            val bytes = payload ?: throw CsvParsingException("Im Multipart-Upload wurde keine CSV-Datei gefunden.")
             if (bytes.isEmpty()) {
-                throw CsvParsingException("Uploaded CSV file is empty.")
+                throw CsvParsingException("Die hochgeladene CSV-Datei ist leer.")
             }
 
             logger.info("csv upload fileName={} bytes={}", originalFileName ?: "unknown", bytes.size)
@@ -86,11 +86,11 @@ fun Route.classificationRoutes(
 
 private fun MaterialRequest.validate(): MaterialRequest {
     if (materialNumber.isBlank()) {
-        throw IllegalArgumentException("materialNumber must not be blank.")
+        throw IllegalArgumentException("Materialnummer darf nicht leer sein.")
     }
 
     if (shortText.isBlank() && purchaseText.isBlank()) {
-        throw IllegalArgumentException("At least one of shortText or purchaseText must be provided.")
+        throw IllegalArgumentException("Mindestens eines von Kurztext oder Einkaufsbestelltext muss angegeben werden.")
     }
 
     return this

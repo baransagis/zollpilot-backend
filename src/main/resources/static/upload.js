@@ -47,7 +47,7 @@
   function resetFileSelection() {
     state.file = null;
     refs.fileInput.value = "";
-    refs.selectedFile.textContent = "No file selected";
+    refs.selectedFile.textContent = "Keine Datei ausgewählt";
   }
 
   function setBusy(isBusy) {
@@ -98,9 +98,11 @@
     return 35;
   }
 
-  function titleCase(value) {
-    const input = String(value || "").toLowerCase();
-    return input ? input.charAt(0).toUpperCase() + input.slice(1) : "Low";
+  function confidenceLabel(value) {
+    const label = normalizeConfidenceLabel(value);
+    if (label === "high") return "Hoch";
+    if (label === "medium") return "Mittel";
+    return "Niedrig";
   }
 
   function renderCandidate(candidate) {
@@ -109,19 +111,15 @@
 
     return `
       <article class="candidate">
-        <p class="candidate-code">${escapeHtml(candidate?.code || "n/a")}</p>
-        <p class="candidate-label">${escapeHtml(candidate?.label || "No label")}</p>
-        <p class="candidate-score">Candidate score: ${escapeHtml(safeScore)}%</p>
+        <p class="candidate-code">${escapeHtml(candidate?.code || "k. A.")}</p>
+        <p class="candidate-label">${escapeHtml(candidate?.label || "Keine Bezeichnung")}</p>
+        <p class="candidate-score">Confidence-Score: ${escapeHtml(safeScore)}%</p>
       </article>
     `;
   }
 
   function renderHints(row) {
     const hints = Array.isArray(row?.missingInformation) ? row.missingInformation : [];
-
-    if (hints.length === 0) {
-      return '<p class="no-hints">No additional details needed for higher confidence.</p>';
-    }
 
     const items = hints.map((hint) => `<li>${escapeHtml(hint)}</li>`).join("");
     return `<ul class="hints">${items}</ul>`;
@@ -134,7 +132,7 @@
 
     const candidatesHtml = candidates.length > 0
       ? candidates.map(renderCandidate).join("")
-      : '<article class="candidate"><p class="candidate-label">No CN candidates returned.</p></article>';
+      : '<article class="candidate"><p class="candidate-label">Keine KN-Kandidaten gefunden.</p></article>';
 
     return `
       <article class="result-card">
@@ -157,20 +155,20 @@
           <aside class="confidence-box">
             <div class="confidence-row">
               <span>Confidence</span>
-              <span class="confidence-label ${escapeHtml(confidence)}">${escapeHtml(titleCase(confidence))}</span>
+              <span class="confidence-label ${escapeHtml(confidence)}">${escapeHtml(confidenceLabel(confidence))}</span>
             </div>
             <div class="progress"><span style="width:${score.toFixed(1)}%"></span></div>
-            <p class="candidate-score">Confidence score: ${score.toFixed(1)}%</p>
+            <p class="candidate-score">Confidence-Score: ${score.toFixed(1)}%</p>
           </aside>
         </div>
 
         <section>
-          <h3 class="section-title">Top CN Candidates</h3>
+          <h3 class="section-title">Top-KN-Kandidaten</h3>
           <div class="candidates">${candidatesHtml}</div>
         </section>
 
         <section>
-          <h3 class="section-title">Hints for Higher Confidence</h3>
+          <h3 class="section-title">Hinweise fur höhere Confidence</h3>
           ${renderHints(row)}
         </section>
       </article>
@@ -183,10 +181,10 @@
       : rows.reduce((sum, row) => sum + scoreFromRow(row), 0) / rows.length;
 
     refs.summarySection.hidden = false;
-    refs.summaryFile.textContent = fileName || "(unknown)";
+    refs.summaryFile.textContent = fileName || "(unbekannt)";
     refs.summaryRows.textContent = String(rows.length);
     refs.summaryConfidence.textContent = `${avgConfidence.toFixed(1)}%`;
-    refs.summaryState.textContent = ok ? "Success" : "Failed";
+    refs.summaryState.textContent = ok ? "Erfolgreich" : "Fehlgeschlagen";
   }
 
   function renderRows(rows) {
@@ -218,22 +216,22 @@
 
   function handleChosenFile(file) {
     if (!file) {
-      setStatus("No file selected.", "error");
+      setStatus("Keine Datei ausgewählt.", "error");
       return false;
     }
 
     if (!isCsvFile(file)) {
-      setStatus("Please select a CSV file (*.csv).", "error");
+      setStatus("Bitte wählen Sie eine CSV-Datei (*.csv) aus.", "error");
       return false;
     }
 
     if (file.size === 0) {
-      setStatus("Selected file is empty.", "error");
+      setStatus("Die ausgewählte Datei ist leer.", "error");
       return false;
     }
 
     selectFile(file);
-    setStatus("File selected. Ready to upload.");
+    setStatus("Datei ausgewählt. Bereit zum Hochladen.");
     return true;
   }
 
@@ -243,22 +241,22 @@
     }
 
     if (!state.file) {
-      setStatus("Select a CSV file before uploading.", "error");
+      setStatus("Wählen Sie vor dem Hochladen eine CSV-Datei aus.", "error");
       return;
     }
 
     if (!isCsvFile(state.file)) {
-      setStatus("Only CSV files are supported.", "error");
+      setStatus("Es werden nur CSV-Dateien unterstützt.", "error");
       return;
     }
 
     if (state.file.size === 0) {
-      setStatus("Selected file is empty.", "error");
+      setStatus("Die ausgewählte Datei ist leer.", "error");
       return;
     }
 
     setBusy(true);
-    setStatus(`Uploading ${state.file.name} ...`, "loading");
+    setStatus(`${state.file.name} wird hochgeladen ...`, "loading");
 
     try {
       const form = new FormData();
@@ -279,7 +277,7 @@
         try {
           payload = JSON.parse(text);
         } catch (_) {
-          throw new Error("Server returned malformed JSON.");
+          throw new Error("Der Server hat fehlerhaftes JSON zuruckgegeben.");
         }
       }
 
@@ -297,11 +295,11 @@
       }
 
       renderRows(rows);
-      updateSummary(state.file?.name || "(unknown)", rows, true);
-      setStatus(`Upload successful. Received ${rows.length} row results.`, "ok");
+      updateSummary(state.file?.name || "(unbekannt)", rows, true);
+      setStatus(`Upload erfolgreich. ${rows.length} Ergebnisse erhalten.`, "ok");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      updateSummary(state.file?.name || "(unknown)", [], false);
+      updateSummary(state.file?.name || "(unbekannt)", [], false);
       refs.emptyState.hidden = true;
       refs.resultsSection.hidden = true;
       setStatus(message, "error");
@@ -317,7 +315,7 @@
 
     resetFileSelection();
     clearResults();
-    setStatus("Selection and results cleared.");
+    setStatus("Auswahl und Ergebnisse wurden entfernt.");
   }
 
   refs.dropzone.addEventListener("click", () => {
