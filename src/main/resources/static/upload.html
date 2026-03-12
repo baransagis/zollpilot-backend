@@ -93,12 +93,21 @@
         </div>
       </div>
 
-        <section id="resultsPanel" class="panel results-panel" hidden>
+      <section id="resultsPanel" class="panel results-panel" hidden>
         <header class="panel-header results-header">
           <h2>
             <span class="panel-dot panel-dot-green" aria-hidden="true"></span>
             Offene Klassifizierungen
           </h2>
+          <label class="confidence-filter" for="resultsConfidenceFilter">
+            <span>Confidence-Filter</span>
+            <select id="resultsConfidenceFilter">
+              <option value="all">Alle</option>
+              <option value="high">Nur hohe Confidence</option>
+              <option value="medium">Nur mittlere Confidence</option>
+              <option value="low">Nur niedrige Confidence</option>
+            </select>
+          </label>
         </header>
         <section id="resultsSection" class="results" hidden>
           <div id="resultsGrid" class="results-grid"></div>

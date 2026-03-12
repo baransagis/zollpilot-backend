@@ -20,6 +20,7 @@
     filterHighBtn: document.getElementById("filterHighBtn"),
     filterInfo: document.getElementById("filterInfo"),
     resultsPanel: document.getElementById("resultsPanel"),
+    resultsConfidenceFilter: document.getElementById("resultsConfidenceFilter"),
     resultsSection: document.getElementById("resultsSection"),
     resultsGrid: document.getElementById("resultsGrid"),
     topRow: document.querySelector(".top-row")
@@ -30,6 +31,7 @@
     rows: [],
     uploading: false,
     filterHigh: false,
+    confidenceFilter: "all",
     llmJobId: null,
     llmPollTimer: null,
     llmPollStartedAt: null
@@ -53,6 +55,7 @@
     stopLlmPolling();
     state.rows = [];
     state.filterHigh = false;
+    state.confidenceFilter = "all";
     refs.rightCol.hidden = true;
     refs.filterPanel.hidden = true;
     refs.resultsPanel.hidden = true;
@@ -62,6 +65,7 @@
     refs.filterHighBtn.classList.remove("active");
     refs.filterHighBtn.textContent = "Alle High Confidence Werte zuweisen";
     refs.filterInfo.textContent = "";
+    refs.resultsConfidenceFilter.value = "all";
     // Panel-Titel zurücksetzen
     const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
     if (panelTitle) {
@@ -125,6 +129,14 @@
     const label = String(value || "low").toLowerCase();
     if (label === "high" || label === "medium" || label === "low") return label;
     return "low";
+  }
+
+  function normalizeConfidenceFilter(value) {
+    const filter = String(value || "all").toLowerCase();
+    if (filter === "all" || filter === "high" || filter === "medium" || filter === "low") {
+      return filter;
+    }
+    return "all";
   }
 
   function scoreFromRow(row) {
@@ -298,9 +310,13 @@
   }
 
   function applyFilter() {
-    const displayed = state.filterHigh
+    const confidenceFilter = normalizeConfidenceFilter(state.confidenceFilter);
+    const rowsAfterAssignmentFilter = state.filterHigh
       ? state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) !== "high")
       : state.rows;
+    const displayed = confidenceFilter === "all"
+      ? rowsAfterAssignmentFilter
+      : rowsAfterAssignmentFilter.filter((row) => normalizeConfidenceLabel(row?.confidence) === confidenceFilter);
 
     refs.resultsGrid.innerHTML = displayed.map((row) => renderRowCard(row)).join("");
 
@@ -666,6 +682,11 @@
   refs.filterHighBtn.addEventListener("click", () => {
     if (state.rows.length === 0) return;
     state.filterHigh = !state.filterHigh;
+    applyFilter();
+  });
+
+  refs.resultsConfidenceFilter.addEventListener("change", (event) => {
+    state.confidenceFilter = normalizeConfidenceFilter(event.target.value);
     applyFilter();
   });
 
