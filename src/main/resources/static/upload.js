@@ -60,7 +60,7 @@
     refs.resultsGrid.innerHTML = "";
     refs.topRow.classList.remove("top-row--wide");
     refs.filterHighBtn.classList.remove("active");
-    refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
+    refs.filterHighBtn.textContent = "Alle High Confidence Werte zuweisen";
     refs.filterInfo.textContent = "";
     // Panel-Titel zurücksetzen
     const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
@@ -277,7 +277,7 @@
         </section>
 
         <section>
-          <h3 class="section-title">Hinweise fur höhere Confidence</h3>
+          <h3 class="section-title">Hinweise für höhere Confidence</h3>
           ${renderHints(row)}
         </section>
       </article>
@@ -313,7 +313,7 @@
       const dot = panelTitle.querySelector(".panel-dot");
       panelTitle.innerHTML = "";
       if (dot) panelTitle.appendChild(dot);
-      panelTitle.append(state.filterHigh ? " Offene Klassifizierungen" : " Alle Klassifizierungsergebnisse");
+      panelTitle.append(" Offene Klassifizierungen");
     }
 
     if (state.filterHigh) {
@@ -322,7 +322,7 @@
         ? `${openCount} offene Klassifizierung${openCount === 1 ? "" : "en"} – bitte manuell prüfen`
         : "Alle Ergebnisse haben High Confidence ✓";
     } else {
-      refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
+      refs.filterHighBtn.textContent = "Alle High Confidence Werte zuweisen";
       refs.filterInfo.textContent = `${highCount} High-Confidence-Ergebnis${highCount === 1 ? "" : "se"} verfügbar`;
     }
 
@@ -432,7 +432,7 @@
 
   function exportCsv() {
     if (state.uploading || state.rows.length === 0) {
-      setStatus("Keine Ergebnisse verfuegbar. Fuehre erst einen Upload aus.", "error");
+      setStatus("Keine Ergebnisse verfügbar. Führe erst einen Upload aus.", "error");
       return;
     }
 
@@ -552,7 +552,7 @@
         try {
           payload = JSON.parse(text);
         } catch (_) {
-          throw new Error("Der Server hat fehlerhaftes JSON zuruckgegeben.");
+          throw new Error("Der Server hat fehlerhaftes JSON zurückgegeben.");
         }
       }
 

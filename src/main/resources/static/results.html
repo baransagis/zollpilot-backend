@@ -831,16 +831,16 @@
                   </div>
                   <div class="bar"><span style="width:${clampScore(candidate.score)}%"></span></div>
                   <p class="candidate-label">${escapeHtml(candidate.label || "")}</p>
-                  <p class="candidate-reasons">${reasons.map(escapeHtml).join(" | ") || "Keine Begrundungen vorhanden"}</p>
+                  <p class="candidate-reasons">${reasons.map(escapeHtml).join(" | ") || "Keine Begründungen vorhanden"}</p>
                 </li>
               `;
             }).join("")
-          : '<li class="candidate-item"><p class="muted">Keine Kandidaten zuruckgegeben.</p></li>';
+          : '<li class="candidate-item"><p class="muted">Keine Kandidaten zurückgegeben.</p></li>';
 
         const missing = Array.isArray(row.missingInformation) ? row.missingInformation : [];
         const missingHtml = missing.length > 0
           ? missing.map((item) => `<li class="missing-item">${escapeHtml(item)}</li>`).join("")
-          : '<li class="missing-item">Keine zusatzlichen fehlenden Informationen markiert.</li>';
+          : '<li class="missing-item">Keine zusätzlichen fehlenden Informationen markiert.</li>';
 
         const attributes = row.attributes || {};
 
@@ -881,9 +881,9 @@
               ${attributeSection("Abmessungen", attributes.dimensions)}
               ${attributeSection("Normen", attributes.norms)}
               ${attributeSection("Materialhinweise", attributes.materialHints)}
-              ${attributeSection("Haertehinweise", attributes.hardnessHints)}
+              ${attributeSection("Härtehinweise", attributes.hardnessHints)}
               ${attributeSection("Modell-Tokens", attributes.modelTokens)}
-              ${attributeSection("Oberflachenhinweise", attributes.surfaceHints)}
+              ${attributeSection("Oberflächenhinweise", attributes.surfaceHints)}
             </section>
 
             <section class="missing">
@@ -1020,7 +1020,7 @@
               : null;
 
           if (!rows) {
-            throw new Error("Der Endpunkt hat keine gueltige Ergebnisliste zuruckgegeben.");
+            throw new Error("Der Endpunkt hat keine gültige Ergebnisliste zurückgegeben.");
           }
 
           state.rows = rows;
@@ -1041,7 +1041,7 @@
           }
         } catch (error) {
           refs.summary.innerHTML = "";
-          refs.results.innerHTML = '<div class="empty-state">Daten konnten nicht geladen werden. Bitte Backend-Status und Endpunktpfad prufen.</div>';
+          refs.results.innerHTML = '<div class="empty-state">Daten konnten nicht geladen werden. Bitte Backend-Status und Endpunktpfad prüfen.</div>';
           const message = error instanceof Error ? error.message : String(error);
           setStatus(`Ergebnisse konnten nicht geladen werden: ${message}`, "error");
         } finally {
