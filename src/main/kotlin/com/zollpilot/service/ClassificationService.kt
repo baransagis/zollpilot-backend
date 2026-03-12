@@ -1,6 +1,7 @@
 package com.zollpilot.service
 
 import com.zollpilot.domain.ClassificationResult
+import com.zollpilot.domain.LlmProcessingStatus
 import com.zollpilot.domain.MaterialInput
 import org.slf4j.LoggerFactory
 
@@ -15,19 +16,41 @@ class ClassificationService(
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    suspend fun classify(material: MaterialInput): ClassificationResult {
-        val localResult = classifyLocal(material)
-        val llmResult = llmClassificationService.enrichBatch(listOf(localResult)).firstOrNull()
+    fun isLlmConfigured(): Boolean = llmClassificationService.isConfiguredForRequests()
 
-        return localResult.copy(llm = llmResult)
+    suspend fun classify(material: MaterialInput): ClassificationResult {
+        val localResult = classifyLocal(material).withLlmPendingIfConfigured()
+        return completeLlmEnrichment(listOf(localResult)).firstOrNull() ?: localResult
     }
 
     suspend fun classifyBatch(materials: List<MaterialInput>): List<ClassificationResult> {
-        val localResults = materials.map(::classifyLocal)
-        val llmResults = llmClassificationService.enrichBatch(localResults)
+        val localResults = classifyBatchLocalFirst(materials)
+        return completeLlmEnrichment(localResults)
+    }
 
+    fun classifyBatchLocalFirst(materials: List<MaterialInput>): List<ClassificationResult> =
+        materials.map(::classifyLocal).map { it.withLlmPendingIfConfigured() }
+
+    suspend fun completeLlmEnrichment(localResults: List<ClassificationResult>): List<ClassificationResult> {
+        if (localResults.isEmpty()) return emptyList()
+        if (!isLlmConfigured()) {
+            return localResults.map { result ->
+                if (result.llmStatus == LlmProcessingStatus.COMPLETED) {
+                    result
+                } else {
+                    result.copy(llmStatus = LlmProcessingStatus.SKIPPED)
+                }
+            }
+        }
+
+        val llmResults = llmClassificationService.enrichBatch(localResults)
         return localResults.mapIndexed { index, result ->
-            result.copy(llm = llmResults.getOrNull(index))
+            val llmResult = llmResults.getOrNull(index)
+            if (llmResult != null) {
+                result.copy(llm = llmResult, llmStatus = LlmProcessingStatus.COMPLETED)
+            } else {
+                result.copy(llmStatus = LlmProcessingStatus.FAILED)
+            }
         }
     }
 
@@ -61,5 +84,13 @@ class ClassificationService(
             missingInformation = missingInformation,
             confidence = confidence,
         )
+    }
+
+    private fun ClassificationResult.withLlmPendingIfConfigured(): ClassificationResult {
+        return if (isLlmConfigured()) {
+            copy(llmStatus = LlmProcessingStatus.PENDING)
+        } else {
+            copy(llmStatus = LlmProcessingStatus.SKIPPED)
+        }
     }
 }

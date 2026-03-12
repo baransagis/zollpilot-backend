@@ -41,6 +41,21 @@ enum class ConfidenceLevel {
 }
 
 @Serializable
+enum class LlmProcessingStatus {
+    @SerialName("pending")
+    PENDING,
+
+    @SerialName("completed")
+    COMPLETED,
+
+    @SerialName("failed")
+    FAILED,
+
+    @SerialName("skipped")
+    SKIPPED,
+}
+
+@Serializable
 data class ClassificationResult(
     val materialNumber: String,
     val shortText: String,
@@ -52,6 +67,7 @@ data class ClassificationResult(
     val missingInformation: List<String> = emptyList(),
     val confidence: ConfidenceLevel,
     val llm: LlmClassificationResult? = null,
+    val llmStatus: LlmProcessingStatus = LlmProcessingStatus.SKIPPED,
 )
 
 @Serializable

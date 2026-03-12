@@ -6,6 +6,7 @@ import com.zollpilot.api.healthRoutes
 import com.zollpilot.config.AppConfig
 import com.zollpilot.parser.CsvParser
 import com.zollpilot.service.ClassificationService
+import com.zollpilot.service.LlmEnrichmentCoordinator
 import io.ktor.http.ContentType
 import io.ktor.server.application.Application
 import io.ktor.server.response.respondBytes
@@ -17,6 +18,7 @@ import io.ktor.server.routing.routing
 
 fun Application.configureRouting(
     classificationService: ClassificationService,
+    llmEnrichmentCoordinator: LlmEnrichmentCoordinator,
     csvParser: CsvParser,
     appConfig: AppConfig,
     families: List<String>,
@@ -70,7 +72,7 @@ fun Application.configureRouting(
             }
 
             healthRoutes()
-            classificationRoutes(classificationService, csvParser, appConfig)
+            classificationRoutes(classificationService, llmEnrichmentCoordinator, csvParser, appConfig)
             catalogRoutes(families)
         }
     }

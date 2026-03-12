@@ -16,6 +16,10 @@ data class LlmConfig(
     val endpoint: String,
     val model: String,
     val maxItemsPerRequest: Int,
+    val maxPromptCharsPerRequest: Int,
+    val parallelRequests: Int,
+    val maxRetriesPerChunk: Int,
+    val maxCompletionTokens: Int,
     val timeoutSeconds: Long,
     val temperature: Double,
 )
@@ -35,15 +39,27 @@ fun Application.loadAppConfig(): AppConfig {
                 )?.trim()?.takeIf { it.isNotEmpty() },
             endpoint = config.propertyOrNull("app.llm.endpoint")?.getString()
                 ?: "https://api.openai.com/v1/chat/completions",
-            model = config.propertyOrNull("app.llm.model")?.getString() ?: "gpt-4.1-mini",
+            model = config.propertyOrNull("app.llm.model")?.getString() ?: "gpt-4o-mini",
             maxItemsPerRequest = (
-                config.propertyOrNull("app.llm.maxItemsPerRequest")?.getString()?.toIntOrNull() ?: 20
+                config.propertyOrNull("app.llm.maxItemsPerRequest")?.getString()?.toIntOrNull() ?: 12
                 ).coerceAtLeast(1),
+            maxPromptCharsPerRequest = (
+                config.propertyOrNull("app.llm.maxPromptCharsPerRequest")?.getString()?.toIntOrNull() ?: 14000
+                ).coerceAtLeast(2000),
+            parallelRequests = (
+                config.propertyOrNull("app.llm.parallelRequests")?.getString()?.toIntOrNull() ?: 6
+                ).coerceIn(1, 16),
+            maxRetriesPerChunk = (
+                config.propertyOrNull("app.llm.maxRetriesPerChunk")?.getString()?.toIntOrNull() ?: 1
+                ).coerceAtLeast(0),
+            maxCompletionTokens = (
+                config.propertyOrNull("app.llm.maxCompletionTokens")?.getString()?.toIntOrNull() ?: 3600
+                ).coerceAtLeast(100),
             timeoutSeconds = (
-                config.propertyOrNull("app.llm.timeoutSeconds")?.getString()?.toLongOrNull() ?: 45L
+                config.propertyOrNull("app.llm.timeoutSeconds")?.getString()?.toLongOrNull() ?: 150L
                 ).coerceAtLeast(5L),
             temperature = (
-                config.propertyOrNull("app.llm.temperature")?.getString()?.toDoubleOrNull() ?: 0.1
+                config.propertyOrNull("app.llm.temperature")?.getString()?.toDoubleOrNull() ?: 0.0
                 ).coerceAtLeast(0.0),
         ),
     )

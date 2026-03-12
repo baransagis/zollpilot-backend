@@ -1,12 +1,15 @@
 package com.zollpilot.api
 
 import com.zollpilot.config.AppConfig
+import com.zollpilot.domain.ErrorResponse
 import com.zollpilot.domain.MaterialInput
 import com.zollpilot.domain.MaterialRequest
 import com.zollpilot.parser.CsvParser
 import com.zollpilot.parser.CsvParsingException
 import com.zollpilot.service.ClassificationService
+import com.zollpilot.service.LlmEnrichmentCoordinator
 import io.ktor.http.content.PartData
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
@@ -20,6 +23,7 @@ import java.io.ByteArrayInputStream
 
 fun Route.classificationRoutes(
     classificationService: ClassificationService,
+    llmEnrichmentCoordinator: LlmEnrichmentCoordinator,
     csvParser: CsvParser,
     appConfig: AppConfig,
 ) {
@@ -38,6 +42,28 @@ fun Route.classificationRoutes(
 
             val results = classificationService.classifyBatch(requests.map { it.toDomain() })
             call.respond(results)
+        }
+
+        get("/llm-status/{jobId}") {
+            val jobId = call.parameters["jobId"]?.trim().orEmpty()
+            if (jobId.isBlank()) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(message = "Missing llm job id."),
+                )
+                return@get
+            }
+
+            val status = llmEnrichmentCoordinator.status(jobId)
+            if (status == null) {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    ErrorResponse(message = "LLM job not found or expired."),
+                )
+                return@get
+            }
+
+            call.respond(status)
         }
 
         post("/upload-csv") {
@@ -66,8 +92,9 @@ fun Route.classificationRoutes(
             logger.info("csv upload fileName={} bytes={}", originalFileName ?: "unknown", bytes.size)
 
             val rows = csvParser.parse(ByteArrayInputStream(bytes))
-            val results = classificationService.classifyBatch(rows)
-            call.respond(results)
+            val localResults = classificationService.classifyBatchLocalFirst(rows)
+            val response = llmEnrichmentCoordinator.start(localResults)
+            call.respond(response)
         }
 
         get("/test-resource-csv") {
@@ -78,8 +105,9 @@ fun Route.classificationRoutes(
             val materials = stream.use { csvParser.parse(it) }
             logger.info("resource csv file={} rows={}", appConfig.testCsvFile, materials.size)
 
-            val results = classificationService.classifyBatch(materials)
-            call.respond(results)
+            val localResults = classificationService.classifyBatchLocalFirst(materials)
+            val response = llmEnrichmentCoordinator.start(localResults)
+            call.respond(response)
         }
     }
 }

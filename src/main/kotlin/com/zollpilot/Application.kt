@@ -13,6 +13,7 @@ import com.zollpilot.service.ExplanationService
 import com.zollpilot.service.ExtractionService
 import com.zollpilot.service.FamilyDetectionService
 import com.zollpilot.service.LlmClassificationService
+import com.zollpilot.service.LlmEnrichmentCoordinator
 import com.zollpilot.service.NormalizationService
 import com.zollpilot.service.ScoringService
 import io.ktor.server.application.Application
@@ -45,12 +46,14 @@ fun Application.module() {
         explanationService = explanationService,
         llmClassificationService = llmClassificationService,
     )
+    val llmEnrichmentCoordinator = LlmEnrichmentCoordinator(classificationService)
 
     configureLogging()
     configureSerialization()
     configureStatusPages()
     configureRouting(
         classificationService = classificationService,
+        llmEnrichmentCoordinator = llmEnrichmentCoordinator,
         csvParser = CsvParser(),
         appConfig = appConfig,
         families = catalogData.families.map { it.id },
