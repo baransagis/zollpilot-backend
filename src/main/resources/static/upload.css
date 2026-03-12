@@ -140,9 +140,19 @@ main {
 
 .layout {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.top-row {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 24px;
   align-items: start;
+}
+
+.top-row--wide {
+  grid-template-columns: 1fr 1fr;
 }
 
 .panel {
@@ -239,15 +249,16 @@ main {
 
 .actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .btn {
-  width: 100%;
+  width: auto;
   border: 1px solid transparent;
   border-radius: 10px;
-  padding: 13px;
+  padding: 13px 24px;
   font-family: var(--sans);
   font-size: 14px;
   font-weight: 700;
@@ -330,7 +341,7 @@ main {
 }
 
 .summary-panel {
-  margin-top: 16px;
+  /* kein margin-top nötig – nebeneinander mit Dateneingabe */
 }
 
 .summary-grid {
@@ -364,6 +375,10 @@ main {
   min-height: 620px;
   display: grid;
   grid-template-rows: auto 1fr;
+}
+
+.results-panel[hidden] {
+  display: none;
 }
 
 .results-header h2 {
@@ -580,7 +595,7 @@ main {
 }
 
 @media (max-width: 1160px) {
-  .layout {
+  .top-row--wide {
     grid-template-columns: 1fr;
   }
 

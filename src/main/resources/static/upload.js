@@ -14,9 +14,11 @@
     summaryRows: document.getElementById("summaryRows"),
     summaryConfidence: document.getElementById("summaryConfidence"),
     summaryState: document.getElementById("summaryState"),
+    resultsPanel: document.getElementById("resultsPanel"),
     resultsSection: document.getElementById("resultsSection"),
     resultsGrid: document.getElementById("resultsGrid"),
-    emptyState: document.getElementById("emptyState")
+    emptyState: document.getElementById("emptyState"),
+    topRow: document.querySelector(".top-row")
   };
 
   const state = {
@@ -42,9 +44,11 @@
   function clearResults() {
     state.rows = [];
     refs.summarySection.hidden = true;
+    refs.resultsPanel.hidden = true;
     refs.resultsSection.hidden = true;
     refs.resultsGrid.innerHTML = "";
     refs.emptyState.hidden = false;
+    refs.topRow.classList.remove("top-row--wide");
     updateExportState();
   }
 
@@ -193,6 +197,7 @@
       : rows.reduce((sum, row) => sum + scoreFromRow(row), 0) / rows.length;
 
     refs.summarySection.hidden = false;
+    refs.topRow.classList.add("top-row--wide");
     refs.summaryFile.textContent = fileName || "(unbekannt)";
     refs.summaryRows.textContent = String(rows.length);
     refs.summaryConfidence.textContent = `${avgConfidence.toFixed(1)}%`;
@@ -201,6 +206,7 @@
 
   function renderRows(rows) {
     state.rows = rows;
+    refs.resultsPanel.hidden = false;
     refs.emptyState.hidden = true;
     refs.resultsSection.hidden = false;
     refs.resultsGrid.innerHTML = rows.map((row) => renderRowCard(row)).join("");
