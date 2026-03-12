@@ -58,6 +58,7 @@
     refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
     refs.filterInfo.textContent = "";
     updateExportState();
+    updateButtonStates();
   }
 
   function resetFileSelection() {
@@ -66,12 +67,18 @@
     refs.selectedFile.textContent = "Keine Datei ausgewählt";
   }
 
+  function updateButtonStates() {
+    const hasFile = Boolean(state.file);
+    const hasContent = state.rows.length > 0;
+    refs.uploadBtn.disabled = state.uploading || !hasFile;
+    refs.clearBtn.disabled = state.uploading || (!hasFile && !hasContent);
+  }
+
   function setBusy(isBusy) {
     state.uploading = isBusy;
-    refs.uploadBtn.disabled = isBusy;
-    refs.clearBtn.disabled = isBusy;
     refs.fileInput.disabled = isBusy;
     refs.dropzone.setAttribute("aria-disabled", String(isBusy));
+    updateButtonStates();
     updateExportState();
   }
 
@@ -260,6 +267,7 @@
 
     state.file = file;
     refs.selectedFile.textContent = `${file.name} (${file.size} bytes)`;
+    updateButtonStates();
   }
 
   function csvCell(value) {
@@ -273,15 +281,6 @@
       return;
     }
 
-    const exportRows = state.filterHigh
-      ? state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) === "high")
-      : state.rows;
-
-    if (exportRows.length === 0) {
-      setStatus("Keine High-Confidence-Ergebnisse zum Exportieren vorhanden.", "error");
-      return;
-    }
-
     const headers = [
       "Materialnummer",
       "Kurztext",
@@ -291,16 +290,21 @@
 
     const lines = [headers.map(csvCell).join(";")];
 
-    for (const row of exportRows) {
+    for (const row of state.rows) {
+      const isHigh = normalizeConfidenceLabel(row?.confidence) === "high";
       const topCode = Array.isArray(row?.candidates) && row.candidates[0]?.code
         ? row.candidates[0].code
         : "";
+
+      // Filter aktiv: Zolltarifnummer nur bei High Confidence, sonst leer
+      // Filter inaktiv: Zolltarifnummer immer mit Top-Kandidat
+      const zolltarifnummer = state.filterHigh ? (isHigh ? topCode : "") : topCode;
 
       lines.push([
         row?.materialNumber || "",
         row?.shortText || "",
         row?.purchaseText || "",
-        topCode
+        zolltarifnummer
       ].map(csvCell).join(";"));
     }
 
@@ -322,7 +326,10 @@
     link.remove();
     URL.revokeObjectURL(url);
 
-    const filterHint = state.filterHigh ? ` (nur High Confidence, ${exportRows.length} Zeilen)` : ` (${exportRows.length} Zeilen)`;
+    const highCount = state.rows.filter((r) => normalizeConfidenceLabel(r?.confidence) === "high").length;
+    const filterHint = state.filterHigh
+      ? ` (${state.rows.length} Zeilen gesamt, ${highCount} mit Zolltarifnummer)`
+      : ` (${state.rows.length} Zeilen)`;
     setStatus(`CSV exportiert: ${fileName}${filterHint}`, "ok");
   }
 
