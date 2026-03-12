@@ -9,20 +9,26 @@
     exportBtn: document.getElementById("exportBtn"),
     clearBtn: document.getElementById("clearBtn"),
     status: document.getElementById("status"),
+    rightCol: document.getElementById("rightCol"),
     summarySection: document.getElementById("summarySection"),
     summaryFile: document.getElementById("summaryFile"),
     summaryRows: document.getElementById("summaryRows"),
     summaryConfidence: document.getElementById("summaryConfidence"),
     summaryState: document.getElementById("summaryState"),
+    filterPanel: document.getElementById("filterPanel"),
+    filterHighBtn: document.getElementById("filterHighBtn"),
+    filterInfo: document.getElementById("filterInfo"),
+    resultsPanel: document.getElementById("resultsPanel"),
     resultsSection: document.getElementById("resultsSection"),
     resultsGrid: document.getElementById("resultsGrid"),
-    emptyState: document.getElementById("emptyState")
+    topRow: document.querySelector(".top-row")
   };
 
   const state = {
     file: null,
     rows: [],
-    uploading: false
+    uploading: false,
+    filterHigh: false
   };
 
   function setStatus(message, kind = "") {
@@ -41,11 +47,26 @@
 
   function clearResults() {
     state.rows = [];
-    refs.summarySection.hidden = true;
+    state.filterHigh = false;
+    refs.rightCol.hidden = true;
+    refs.filterPanel.hidden = true;
+    refs.resultsPanel.hidden = true;
     refs.resultsSection.hidden = true;
     refs.resultsGrid.innerHTML = "";
-    refs.emptyState.hidden = false;
+    refs.topRow.classList.remove("top-row--wide");
+    refs.filterHighBtn.classList.remove("active");
+    refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
+    refs.filterInfo.textContent = "";
+    // Panel-Titel zurücksetzen
+    const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
+    if (panelTitle) {
+      const dot = panelTitle.querySelector(".panel-dot");
+      panelTitle.innerHTML = "";
+      if (dot) panelTitle.appendChild(dot);
+      panelTitle.append(" Offene Klassifizierungen");
+    }
     updateExportState();
+    updateButtonStates();
   }
 
   function resetFileSelection() {
@@ -54,12 +75,18 @@
     refs.selectedFile.textContent = "Keine Datei ausgewählt";
   }
 
+  function updateButtonStates() {
+    const hasFile = Boolean(state.file);
+    const hasContent = state.rows.length > 0;
+    refs.uploadBtn.disabled = state.uploading || !hasFile;
+    refs.clearBtn.disabled = state.uploading || (!hasFile && !hasContent);
+  }
+
   function setBusy(isBusy) {
     state.uploading = isBusy;
-    refs.uploadBtn.disabled = isBusy;
-    refs.clearBtn.disabled = isBusy;
     refs.fileInput.disabled = isBusy;
     refs.dropzone.setAttribute("aria-disabled", String(isBusy));
+    updateButtonStates();
     updateExportState();
   }
 
@@ -192,18 +219,52 @@
       ? 0
       : rows.reduce((sum, row) => sum + scoreFromRow(row), 0) / rows.length;
 
-    refs.summarySection.hidden = false;
+    refs.rightCol.hidden = false;
+    refs.topRow.classList.add("top-row--wide");
     refs.summaryFile.textContent = fileName || "(unbekannt)";
     refs.summaryRows.textContent = String(rows.length);
     refs.summaryConfidence.textContent = `${avgConfidence.toFixed(1)}%`;
     refs.summaryState.textContent = ok ? "Erfolgreich" : "Fehlgeschlagen";
   }
 
+  function applyFilter() {
+    const displayed = state.filterHigh
+      ? state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) !== "high")
+      : state.rows;
+
+    refs.resultsGrid.innerHTML = displayed.map((row) => renderRowCard(row)).join("");
+
+    const highCount = state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) === "high").length;
+    const openCount = state.rows.length - highCount;
+
+    // Panel-Titel dynamisch anpassen
+    const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
+    if (panelTitle) {
+      const dot = panelTitle.querySelector(".panel-dot");
+      panelTitle.innerHTML = "";
+      if (dot) panelTitle.appendChild(dot);
+      panelTitle.append(state.filterHigh ? " Offene Klassifizierungen" : " Alle Klassifizierungsergebnisse");
+    }
+
+    if (state.filterHigh) {
+      refs.filterHighBtn.textContent = "Zuweisung aufheben – Alle anzeigen";
+      refs.filterInfo.textContent = openCount > 0
+        ? `${openCount} offene Klassifizierung${openCount === 1 ? "" : "en"} – bitte manuell prüfen`
+        : "Alle Ergebnisse haben High Confidence ✓";
+    } else {
+      refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
+      refs.filterInfo.textContent = `${highCount} High-Confidence-Ergebnis${highCount === 1 ? "" : "se"} verfügbar`;
+    }
+
+    refs.filterHighBtn.classList.toggle("active", state.filterHigh);
+  }
+
   function renderRows(rows) {
     state.rows = rows;
-    refs.emptyState.hidden = true;
+    refs.resultsPanel.hidden = false;
+    refs.filterPanel.hidden = false;
     refs.resultsSection.hidden = false;
-    refs.resultsGrid.innerHTML = rows.map((row) => renderRowCard(row)).join("");
+    applyFilter();
     updateExportState();
   }
 
@@ -226,19 +287,12 @@
 
     state.file = file;
     refs.selectedFile.textContent = `${file.name} (${file.size} bytes)`;
+    updateButtonStates();
   }
 
   function csvCell(value) {
     const text = String(value ?? "").replace(/\r?\n/g, " ");
     return `"${text.replace(/"/g, "\"\"")}"`;
-  }
-
-  function formatPercent(value) {
-    const numeric = Number(value);
-    if (Number.isFinite(numeric)) {
-      return numeric.toFixed(1);
-    }
-    return "0.0";
   }
 
   function exportCsv() {
@@ -251,42 +305,26 @@
       "Materialnummer",
       "Kurztext",
       "Einkaufsbestelltext",
-      "Confidence-Level",
-      "Confidence-Score",
-      "Kandidat 1 Code",
-      "Kandidat 1 Bezeichnung",
-      "Kandidat 1 Score",
-      "Kandidat 2 Code",
-      "Kandidat 2 Bezeichnung",
-      "Kandidat 2 Score",
-      "Kandidat 3 Code",
-      "Kandidat 3 Bezeichnung",
-      "Kandidat 3 Score",
-      "Hinweise"
+      "Zolltarifnummern"
     ];
 
     const lines = [headers.map(csvCell).join(";")];
 
     for (const row of state.rows) {
-      const candidates = Array.isArray(row?.candidates) ? row.candidates : [];
-      const hints = Array.isArray(row?.missingInformation) ? row.missingInformation.join(" | ") : "";
+      const isHigh = normalizeConfidenceLabel(row?.confidence) === "high";
+      const topCode = Array.isArray(row?.candidates) && row.candidates[0]?.code
+        ? row.candidates[0].code
+        : "";
+
+      // Filter aktiv: Zolltarifnummer nur bei High Confidence, sonst leer
+      // Filter inaktiv: Zolltarifnummer immer mit Top-Kandidat
+      const zolltarifnummer = state.filterHigh ? (isHigh ? topCode : "") : topCode;
 
       lines.push([
         row?.materialNumber || "",
         row?.shortText || "",
         row?.purchaseText || "",
-        confidenceLabel(row?.confidence),
-        scoreFromRow(row).toFixed(1),
-        candidates[0]?.code || "",
-        candidates[0]?.label || "",
-        formatPercent(candidates[0]?.score),
-        candidates[1]?.code || "",
-        candidates[1]?.label || "",
-        formatPercent(candidates[1]?.score),
-        candidates[2]?.code || "",
-        candidates[2]?.label || "",
-        formatPercent(candidates[2]?.score),
-        hints
+        zolltarifnummer
       ].map(csvCell).join(";"));
     }
 
@@ -297,7 +335,8 @@
     const date = new Date().toISOString().slice(0, 10);
     const base = String(state.file?.name || "zollpilot_upload").replace(/\.[^/.]+$/, "");
     const safeBase = base.replace(/[^a-z0-9_-]+/gi, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
-    const fileName = `${safeBase || "zollpilot_upload"}_kn_hs_${date}.csv`;
+    const suffix = state.filterHigh ? "_high_confidence" : "";
+    const fileName = `${safeBase || "zollpilot_upload"}_kn_hs${suffix}_${date}.csv`;
 
     const link = document.createElement("a");
     link.href = url;
@@ -307,7 +346,11 @@
     link.remove();
     URL.revokeObjectURL(url);
 
-    setStatus(`CSV exportiert: ${fileName}`, "ok");
+    const highCount = state.rows.filter((r) => normalizeConfidenceLabel(r?.confidence) === "high").length;
+    const filterHint = state.filterHigh
+      ? ` (${state.rows.length} Zeilen gesamt, ${highCount} mit Zolltarifnummer)`
+      : ` (${state.rows.length} Zeilen)`;
+    setStatus(`CSV exportiert: ${fileName}${filterHint}`, "ok");
   }
 
   function handleChosenFile(file) {
@@ -397,8 +440,8 @@
       const message = error instanceof Error ? error.message : String(error);
       state.rows = [];
       updateSummary(state.file?.name || "(unbekannt)", [], false);
+      refs.resultsPanel.hidden = true;
       refs.resultsGrid.innerHTML = "";
-      refs.emptyState.hidden = false;
       refs.resultsSection.hidden = true;
       updateExportState();
       setStatus(message, "error");
@@ -471,6 +514,12 @@
   refs.uploadBtn.addEventListener("click", uploadCsv);
   refs.exportBtn.addEventListener("click", exportCsv);
   refs.clearBtn.addEventListener("click", clearAll);
+
+  refs.filterHighBtn.addEventListener("click", () => {
+    if (state.rows.length === 0) return;
+    state.filterHigh = !state.filterHigh;
+    applyFilter();
+  });
 
   clearResults();
 })();
