@@ -175,8 +175,31 @@ app {
     familiesPath = "catalog/families.json"
     candidatesPath = "catalog/cn-candidates.json"
   }
+  llm {
+    enabled = true
+    apiKey = ${?OPENAI_API_KEY}
+    endpoint = "https://api.openai.com/v1/chat/completions"
+    model = "gpt-4.1-mini"
+    maxItemsPerRequest = 20
+    timeoutSeconds = 45
+    temperature = 0.1
+  }
 }
 ```
+
+`OPENAI_API_KEY` can be provided as environment variable. If no key is set, local deterministic classification still works and `llm` in the response stays `null`.
+
+### LLM Enrichment in Response
+
+Each classification item can contain:
+
+- `llm.headline`
+- `llm.candidateHeadlines` (same style per candidate)
+- `llm.selectedCnCode`
+- `llm.explanation`
+- `llm.confidencePercent` (0-100)
+
+Batch endpoints group multiple clusters into one OpenAI request and chunk by `app.llm.maxItemsPerRequest` to avoid sending many requests.
 
 ## Extension Guide
 

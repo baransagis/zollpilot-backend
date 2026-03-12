@@ -11,10 +11,27 @@ class ClassificationService(
     private val candidateRetrievalService: CandidateRetrievalService,
     private val scoringService: ScoringService,
     private val explanationService: ExplanationService,
+    private val llmClassificationService: LlmClassificationService,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun classify(material: MaterialInput): ClassificationResult {
+    suspend fun classify(material: MaterialInput): ClassificationResult {
+        val localResult = classifyLocal(material)
+        val llmResult = llmClassificationService.enrichBatch(listOf(localResult)).firstOrNull()
+
+        return localResult.copy(llm = llmResult)
+    }
+
+    suspend fun classifyBatch(materials: List<MaterialInput>): List<ClassificationResult> {
+        val localResults = materials.map(::classifyLocal)
+        val llmResults = llmClassificationService.enrichBatch(localResults)
+
+        return localResults.mapIndexed { index, result ->
+            result.copy(llm = llmResults.getOrNull(index))
+        }
+    }
+
+    private fun classifyLocal(material: MaterialInput): ClassificationResult {
         val normalizedText = normalizationService.normalize(material.shortText, material.purchaseText)
         val attributes = extractionService.extract(normalizedText)
         val normalizedFamily = familyDetectionService.detect(normalizedText, attributes)
@@ -45,6 +62,4 @@ class ClassificationService(
             confidence = confidence,
         )
     }
-
-    fun classifyBatch(materials: List<MaterialInput>): List<ClassificationResult> = materials.map(::classify)
 }

@@ -51,4 +51,14 @@ data class ClassificationResult(
     val candidates: List<RankedCandidate> = emptyList(),
     val missingInformation: List<String> = emptyList(),
     val confidence: ConfidenceLevel,
+    val llm: LlmClassificationResult? = null,
+)
+
+@Serializable
+data class LlmClassificationResult(
+    val headline: String,
+    val candidateHeadlines: List<String> = emptyList(),
+    val selectedCnCode: String? = null,
+    val explanation: String,
+    val confidencePercent: Int,
 )
