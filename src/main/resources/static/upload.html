@@ -53,33 +53,49 @@
           </div>
         </section>
 
-        <section id="summarySection" class="panel summary-panel" hidden>
-          <header class="panel-header">
-            <span class="panel-dot panel-dot-green" aria-hidden="true"></span>
-            <h2>Upload-Zusammenfassung</h2>
-          </header>
-          <div class="summary-grid">
-            <article class="summary-item">
-              <p class="summary-label">Datei</p>
-              <p id="summaryFile" class="summary-value">-</p>
-            </article>
-            <article class="summary-item">
-              <p class="summary-label">Gefundene Zeilen</p>
-              <p id="summaryRows" class="summary-value">0</p>
-            </article>
-            <article class="summary-item">
-              <p class="summary-label">Durchschnittliche Confidence</p>
-              <p id="summaryConfidence" class="summary-value">0%</p>
-            </article>
-            <article class="summary-item">
-              <p class="summary-label">Status</p>
-              <p id="summaryState" class="summary-value">-</p>
-            </article>
-          </div>
-        </section>
+        <div id="rightCol" class="right-col" hidden>
+          <section id="summarySection" class="panel summary-panel">
+            <header class="panel-header">
+              <span class="panel-dot panel-dot-green" aria-hidden="true"></span>
+              <h2>Upload-Zusammenfassung</h2>
+            </header>
+            <div class="summary-grid">
+              <article class="summary-item">
+                <p class="summary-label">Datei</p>
+                <p id="summaryFile" class="summary-value">-</p>
+              </article>
+              <article class="summary-item">
+                <p class="summary-label">Gefundene Zeilen</p>
+                <p id="summaryRows" class="summary-value">0</p>
+              </article>
+              <article class="summary-item">
+                <p class="summary-label">Durchschnittliche Confidence</p>
+                <p id="summaryConfidence" class="summary-value">0%</p>
+              </article>
+              <article class="summary-item">
+                <p class="summary-label">Status</p>
+                <p id="summaryState" class="summary-value">-</p>
+              </article>
+            </div>
+          </section>
+
+          <section id="filterPanel" class="panel filter-panel" hidden>
+            <header class="panel-header">
+              <span class="panel-dot" aria-hidden="true"></span>
+              <h2>Schnellfilter</h2>
+            </header>
+            <div class="filter-body">
+              <p class="filter-description">Zeige nur Ergebnisse mit hoher Klassifizierungssicherheit an.</p>
+              <button id="filterHighBtn" class="btn btn-filter" type="button">
+                Nur High Confidence Werte zuweisen
+              </button>
+              <p id="filterInfo" class="filter-info"></p>
+            </div>
+          </section>
+        </div>
       </div>
 
-      <section id="resultsPanel" class="panel results-panel" hidden>
+        <section id="resultsPanel" class="panel results-panel" hidden>
         <header class="panel-header results-header">
           <h2>
             <span class="panel-dot panel-dot-green" aria-hidden="true"></span>
@@ -88,11 +104,6 @@
         </header>
         <section id="resultsSection" class="results" hidden>
           <div id="resultsGrid" class="results-grid"></div>
-        </section>
-        <section id="emptyState" class="empty-state">
-          <p class="empty-icon">[]</p>
-          <h2>Noch keine Ergebnisse</h2>
-          <p>Lade eine CSV-Datei hoch, um zeilenweise Ergebnisse zu sehen.</p>
         </section>
       </section>
     </section>
