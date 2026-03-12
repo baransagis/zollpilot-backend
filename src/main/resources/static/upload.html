@@ -10,17 +10,15 @@
 <body>
   <header class="topbar">
     <div class="logo">
-      <div class="logo-icon">HS</div>
       <div class="logo-text">Zoll<span>Pilot</span></div>
     </div>
-    <p class="header-badge">CSV Upload | KN/HS Vorschlaege</p>
   </header>
 
   <main>
     <section class="hero">
-      <p class="hero-eyebrow">AI-Powered Classification</p>
-      <h1>CSV Upload fuer die <em>KN/HS</em> Klassifizierung</h1>
-      <p>Lade SAP-Materialdaten als CSV hoch und erhalte direkt Kandidaten mit Confidence-Level und Hinweisen zur Verbesserung.</p>
+      <p class="hero-eyebrow">AI-Supported</p>
+      <h1><em>KN</em> Klassifizierung</h1>
+      <p>Lade Materialdaten als CSV hoch und erhalte direkt Kandidaten mit Confidence-Level</p>
     </section>
 
     <section class="layout">
@@ -32,24 +30,24 @@
           </header>
 
           <div class="upload-zone">
-            <div id="dropzone" class="drop-area" tabindex="0" role="button" aria-label="CSV-Datei hier ablegen oder Dateiauswahl oeffnen">
+            <div id="dropzone" class="drop-area" tabindex="0" role="button" aria-label="CSV-Datei hier ablegen oder Dateiauswahl öffnen">
               <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
               <p class="drop-icon">CSV</p>
               <p class="drop-title">CSV-Datei hier ablegen</p>
-              <p class="drop-subtitle">oder klicken, um eine Datei auszuwaehlen</p>
-              <p id="selectedFile" class="file-name">Keine Datei ausgewaehlt</p>
+              <p class="drop-subtitle">oder klicken, um eine Datei auszuwählen</p>
+              <p id="selectedFile" class="file-name">Keine Datei ausgewählt</p>
             </div>
           </div>
 
           <div class="controls actions">
-            <button id="uploadBtn" class="btn btn-primary" type="button">CSV hochladen</button>
+            <button id="uploadBtn" class="btn btn-primary" type="button">CSV analysieren</button>
             <button id="exportBtn" class="btn btn-secondary" type="button" disabled>CSV exportieren</button>
-            <button id="clearBtn" class="btn btn-secondary" type="button">Zuruecksetzen</button>
+            <button id="clearBtn" class="btn btn-secondary" type="button">Zurücksetzen</button>
           </div>
 
           <div class="info-block">
-            <p class="helper">Erforderliche Spalten: <strong>Materialnummer</strong>, <strong>Kurztext</strong>, <strong>Einkaufsbestelltext</strong>. Trennzeichen kann <code>;</code> oder <code>,</code> sein.</p>
-            <p id="status" class="status" aria-live="polite">Waehle eine CSV-Datei, um zu starten.</p>
+            <p class="helper">Erforderliche Spalten: <strong>Materialnummer</strong>, <strong>Kurztext</strong>, <strong>Einkaufsbestelltext</strong>.</p>
+            <p id="status" class="status" aria-live="polite">Wähle eine CSV-Datei, um zu starten.</p>
           </div>
         </section>
 
@@ -82,12 +80,12 @@
           <section id="filterPanel" class="panel filter-panel" hidden>
             <header class="panel-header">
               <span class="panel-dot" aria-hidden="true"></span>
-              <h2>Schnellfilter</h2>
+              <h2>Schnellzuweisung</h2>
             </header>
             <div class="filter-body">
-              <p class="filter-description">Zeige nur Ergebnisse mit hoher Klassifizierungssicherheit an.</p>
+              <p class="filter-description">Weise allen Materialien mit hoher Klassifizierungs-Confidence automatisch zu</p>
               <button id="filterHighBtn" class="btn btn-filter" type="button">
-                Nur High Confidence Werte zuweisen
+                Alle High-Confidence Werte zuweisen
               </button>
               <p id="filterInfo" class="filter-info"></p>
             </div>
@@ -95,12 +93,35 @@
         </div>
       </div>
 
-        <section id="resultsPanel" class="panel results-panel" hidden>
+      <section id="aiPanel" class="panel filter-panel" hidden>
+        <header class="panel-header">
+          <span class="panel-dot panel-dot-green" aria-hidden="true"></span>
+          <h2>KI-Unterstützung</h2>
+        </header>
+        <div class="filter-body">
+          <p class="filter-description">Starte die KI-Anreicherung nur bei Bedarf.</p>
+          <button id="startLlmBtn" class="btn btn-filter" type="button">
+            KI-Unterstützung starten
+          </button>
+          <p id="llmInfo" class="filter-info"></p>
+        </div>
+      </section>
+
+      <section id="resultsPanel" class="panel results-panel" hidden>
         <header class="panel-header results-header">
           <h2>
             <span class="panel-dot panel-dot-green" aria-hidden="true"></span>
             Offene Klassifizierungen
           </h2>
+          <label class="confidence-filter" for="resultsConfidenceFilter">
+            <span>Confidence-Filter</span>
+            <select id="resultsConfidenceFilter">
+              <option value="all">Alle</option>
+              <option value="high">Nur hohe Confidence</option>
+              <option value="medium">Nur mittlere Confidence</option>
+              <option value="low">Nur niedrige Confidence</option>
+            </select>
+          </label>
         </header>
         <section id="resultsSection" class="results" hidden>
           <div id="resultsGrid" class="results-grid"></div>

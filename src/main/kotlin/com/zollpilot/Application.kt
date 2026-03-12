@@ -12,6 +12,8 @@ import com.zollpilot.service.ClassificationService
 import com.zollpilot.service.ExplanationService
 import com.zollpilot.service.ExtractionService
 import com.zollpilot.service.FamilyDetectionService
+import com.zollpilot.service.LlmClassificationService
+import com.zollpilot.service.LlmEnrichmentCoordinator
 import com.zollpilot.service.NormalizationService
 import com.zollpilot.service.ScoringService
 import io.ktor.server.application.Application
@@ -33,6 +35,7 @@ fun Application.module() {
     val candidateRetrievalService = CandidateRetrievalService(catalogData.candidates)
     val scoringService = ScoringService()
     val explanationService = ExplanationService()
+    val llmClassificationService = LlmClassificationService(appConfig.llm)
 
     val classificationService = ClassificationService(
         normalizationService = normalizationService,
@@ -41,22 +44,28 @@ fun Application.module() {
         candidateRetrievalService = candidateRetrievalService,
         scoringService = scoringService,
         explanationService = explanationService,
+        llmClassificationService = llmClassificationService,
     )
+    val llmEnrichmentCoordinator = LlmEnrichmentCoordinator(classificationService)
 
     configureLogging()
     configureSerialization()
     configureStatusPages()
     configureRouting(
         classificationService = classificationService,
+        llmEnrichmentCoordinator = llmEnrichmentCoordinator,
         csvParser = CsvParser(),
         appConfig = appConfig,
         families = catalogData.families.map { it.id },
     )
 
     logger.info(
-        "catalog loaded families={} candidates={} testCsvFile={}",
+        "catalog loaded families={} candidates={} testCsvFile={} llmEnabled={} llmModel={} llmBatchSize={}",
         catalogData.families.size,
         catalogData.candidates.size,
         appConfig.testCsvFile,
+        appConfig.llm.enabled && !appConfig.llm.apiKey.isNullOrBlank(),
+        appConfig.llm.model,
+        appConfig.llm.maxItemsPerRequest,
     )
 }

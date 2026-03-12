@@ -78,6 +78,7 @@ Base path: `/api/v1`
 - `POST /classify/batch`
 - `POST /classify/upload-csv`
 - `GET /classify/test-resource-csv`
+- `GET /classify/llm-status/{jobId}`
 - `GET /health`
 - `GET /catalog/families`
 
@@ -85,6 +86,7 @@ Base path: `/api/v1`
 
 - `GET /` (or `/ui`, `/ui/upload`)
 - Uploads a CSV to `POST /api/v1/classify/upload-csv` and renders the returned JSON results in a table with raw JSON fallback.
+- CSV/resource endpoints return local rule-based results immediately and include `llmJobId`/`llmJobStatus` while AI enrichment runs in the background.
 
 ## Example JSON Request
 
@@ -175,8 +177,42 @@ app {
     familiesPath = "catalog/families.json"
     candidatesPath = "catalog/cn-candidates.json"
   }
+  llm {
+    enabled = true
+    apiKey = ${?OPENAI_API_KEY}
+    endpoint = "https://api.openai.com/v1/chat/completions"
+    model = "gpt-4o-mini"
+    maxItemsPerRequest = 12
+    maxPromptCharsPerRequest = 14000
+    parallelRequests = 6
+    maxRetriesPerChunk = 1
+    maxCompletionTokens = 3600
+    timeoutSeconds = 150
+    temperature = 0.0
+  }
 }
 ```
+
+`OPENAI_API_KEY` can be provided as environment variable. If no key is set, local deterministic classification still works and `llm` in the response stays `null`.
+
+### LLM Enrichment in Response
+
+Each classification item can contain:
+
+- `llm.headline`
+- `llm.candidateHeadlines` (same style per candidate)
+- `llm.selectedCnCode` (normalisiert auf volle CN: `NNNN NN NN`, falls ableitbar)
+- `llm.explanation`
+- `llm.confidencePercent` (0-100)
+- `llmStatus` (`pending|completed|failed|skipped`)
+
+LLM Freitext-Felder (`headline`, `candidateHeadlines`, `explanation`) werden in deutscher Sprache angefordert.
+
+Batch endpoints group multiple clusters into one OpenAI request and chunk by `app.llm.maxItemsPerRequest` to avoid sending many requests.
+
+For local-first endpoints (`/classify/upload-csv`, `/classify/test-resource-csv`):
+- initial response: `{ results, llmJobId, llmJobStatus: "processing" }`
+- poll `GET /api/v1/classify/llm-status/{llmJobId}` until `llmJobStatus` is `completed` or `failed`
 
 ## Extension Guide
 

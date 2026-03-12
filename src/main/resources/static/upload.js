@@ -1,5 +1,7 @@
 (() => {
   const endpoint = "/api/v1/classify/upload-csv";
+  const llmStartEndpoint = "/api/v1/classify/start-llm";
+  const llmStatusEndpoint = "/api/v1/classify/llm-status";
 
   const refs = {
     dropzone: document.getElementById("dropzone"),
@@ -18,7 +20,11 @@
     filterPanel: document.getElementById("filterPanel"),
     filterHighBtn: document.getElementById("filterHighBtn"),
     filterInfo: document.getElementById("filterInfo"),
+    aiPanel: document.getElementById("aiPanel"),
+    startLlmBtn: document.getElementById("startLlmBtn"),
+    llmInfo: document.getElementById("llmInfo"),
     resultsPanel: document.getElementById("resultsPanel"),
+    resultsConfidenceFilter: document.getElementById("resultsConfidenceFilter"),
     resultsSection: document.getElementById("resultsSection"),
     resultsGrid: document.getElementById("resultsGrid"),
     topRow: document.querySelector(".top-row")
@@ -28,7 +34,13 @@
     file: null,
     rows: [],
     uploading: false,
-    filterHigh: false
+    filterHigh: false,
+    confidenceFilter: "all",
+    llmRequested: false,
+    llmStarting: false,
+    llmJobId: null,
+    llmPollTimer: null,
+    llmPollStartedAt: null
   };
 
   function setStatus(message, kind = "") {
@@ -46,17 +58,26 @@
   }
 
   function clearResults() {
+    stopLlmPolling();
     state.rows = [];
     state.filterHigh = false;
+    state.confidenceFilter = "all";
+    state.llmRequested = false;
+    state.llmStarting = false;
     refs.rightCol.hidden = true;
     refs.filterPanel.hidden = true;
+    refs.aiPanel.hidden = true;
     refs.resultsPanel.hidden = true;
     refs.resultsSection.hidden = true;
     refs.resultsGrid.innerHTML = "";
     refs.topRow.classList.remove("top-row--wide");
     refs.filterHighBtn.classList.remove("active");
-    refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
+    refs.filterHighBtn.textContent = "Alle High Confidence Werte zuweisen";
     refs.filterInfo.textContent = "";
+    refs.startLlmBtn.textContent = "KI-Unterstützung starten";
+    refs.startLlmBtn.disabled = true;
+    refs.llmInfo.textContent = "";
+    refs.resultsConfidenceFilter.value = "all";
     // Panel-Titel zurücksetzen
     const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
     if (panelTitle) {
@@ -80,6 +101,7 @@
     const hasContent = state.rows.length > 0;
     refs.uploadBtn.disabled = state.uploading || !hasFile;
     refs.clearBtn.disabled = state.uploading || (!hasFile && !hasContent);
+    updateLlmControls();
   }
 
   function setBusy(isBusy) {
@@ -92,6 +114,49 @@
 
   function updateExportState() {
     refs.exportBtn.disabled = state.uploading || state.rows.length === 0;
+  }
+
+  function updateLlmControls() {
+    const hasRows = state.rows.length > 0;
+    const hasLlmData = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) !== "skipped");
+    const hasPending = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "pending");
+    const hasCompleted = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "completed");
+    const hasFailed = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "failed");
+    const canStart = hasPending && !state.llmRequested && !state.llmStarting && !state.uploading;
+
+    refs.aiPanel.hidden = !hasLlmData;
+    if (!hasLlmData) {
+      refs.startLlmBtn.textContent = "KI-Unterstützung starten";
+      refs.startLlmBtn.disabled = true;
+      refs.llmInfo.textContent = "";
+      return;
+    }
+
+    if (state.llmStarting) {
+      refs.startLlmBtn.textContent = "KI wird gestartet ...";
+      refs.startLlmBtn.disabled = true;
+      refs.llmInfo.textContent = "KI-Anreicherung wird gestartet und nachgeladen.";
+      return;
+    }
+
+    if (state.llmRequested) {
+      refs.startLlmBtn.textContent = "KI-Unterstützung gestartet";
+      refs.startLlmBtn.disabled = true;
+      if (hasPending) {
+        refs.llmInfo.textContent = "KI-Anreicherung läuft ...";
+      } else if (hasCompleted) {
+        refs.llmInfo.textContent = "KI-Anreicherung abgeschlossen.";
+      } else if (hasFailed) {
+        refs.llmInfo.textContent = "KI-Anreicherung fehlgeschlagen.";
+      } else {
+        refs.llmInfo.textContent = "KI-Unterstützung wurde gestartet.";
+      }
+      return;
+    }
+
+    refs.startLlmBtn.textContent = "KI-Unterstützung starten";
+    refs.startLlmBtn.disabled = !canStart;
+    refs.llmInfo.textContent = "Optional: KI nur bei Bedarf für zusätzliche Einschätzung starten.";
   }
 
   function isCsvFile(file) {
@@ -122,6 +187,14 @@
     return "low";
   }
 
+  function normalizeConfidenceFilter(value) {
+    const filter = String(value || "all").toLowerCase();
+    if (filter === "all" || filter === "high" || filter === "medium" || filter === "low") {
+      return filter;
+    }
+    return "all";
+  }
+
   function scoreFromRow(row) {
     const top = Number(row?.candidates?.[0]?.score);
     if (!Number.isNaN(top) && Number.isFinite(top)) {
@@ -139,6 +212,13 @@
     if (label === "high") return "Hoch";
     if (label === "medium") return "Mittel";
     return "Niedrig";
+  }
+
+  function rowKey(row) {
+    const materialNumber = String(row?.materialNumber || "");
+    const shortText = String(row?.shortText || "");
+    const purchaseText = String(row?.purchaseText || "");
+    return `${materialNumber}::${shortText}::${purchaseText}`;
   }
 
   function renderCandidate(candidate) {
@@ -164,10 +244,75 @@
     return `<ul class="hints">${items}</ul>`;
   }
 
-  function renderRowCard(row) {
+  function normalizeLlmStatus(value) {
+    const status = String(value || "").toLowerCase();
+    if (status === "pending" || status === "completed" || status === "failed" || status === "skipped") {
+      return status;
+    }
+    return "";
+  }
+
+  function llmConfidence(value) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return Math.max(0, Math.min(100, Math.round(numeric)));
+    }
+    return null;
+  }
+
+  function renderLlmClassification(row) {
+    const llm = row?.llm;
+    const llmStatus = normalizeLlmStatus(row?.llmStatus);
+    if (llmStatus === "pending") {
+      if (!state.llmRequested) {
+        return '<p class="llm-empty">KI-Unterstützung noch nicht gestartet.</p>';
+      }
+      return `
+        <div class="llm-block">
+          <p class="llm-headline">KI-Klassifizierung wird verarbeitet ...</p>
+          <p class="llm-loading"><span class="spinner" aria-hidden="true"></span> Bitte warten, die LLM-Antwort wird nachgeladen.</p>
+        </div>
+      `;
+    }
+
+    if (llmStatus === "failed") {
+      return '<p class="llm-empty">LLM-Ergebnis konnte nicht erzeugt werden. Lokales Ergebnis bleibt bestehen.</p>';
+    }
+
+    if (llmStatus === "skipped") {
+      return '<p class="llm-empty">LLM-Anreicherung ist deaktiviert oder nicht konfiguriert.</p>';
+    }
+
+    if (!llm || typeof llm !== "object") {
+      return '<p class="llm-empty">Kein LLM-Ergebnis verfügbar.</p>';
+    }
+
+    const candidateHeadlines = Array.isArray(llm.candidateHeadlines) ? llm.candidateHeadlines : [];
+    const candidatesHtml = candidateHeadlines.length > 0
+      ? `<ul class="llm-candidates">${candidateHeadlines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+      : '<p class="llm-empty">Keine LLM-Kandidatenzeilen vorhanden.</p>';
+
+    const confidence = llmConfidence(llm.confidencePercent);
+
+    return `
+      <div class="llm-block">
+        <p class="llm-headline">${escapeHtml(llm.headline || "Ohne LLM-Headline")}</p>
+        <div class="llm-meta">
+          <span>Gewählte CN: <strong>${escapeHtml(llm.selectedCnCode || "k. A.")}</strong></span>
+          <span>LLM-Confidence: <strong>${confidence === null ? "k. A." : `${confidence}%`}</strong></span>
+        </div>
+        <p class="llm-explanation">${escapeHtml(llm.explanation || "Keine Begründung vorhanden.")}</p>
+        ${candidatesHtml}
+      </div>
+    `;
+  }
+
+  function renderRowCard(row, rowIndex) {
     const confidence = normalizeConfidenceLabel(row?.confidence);
     const score = scoreFromRow(row);
     const candidates = Array.isArray(row?.candidates) ? row.candidates.slice(0, 3) : [];
+    const manualClassification = String(row?.manualClassification || "");
+    const manualInputId = `manualClassification-${rowIndex}`;
 
     const candidatesHtml = candidates.length > 0
       ? candidates.map(renderCandidate).join("")
@@ -207,8 +352,27 @@
         </section>
 
         <section>
-          <h3 class="section-title">Hinweise fur höhere Confidence</h3>
+          <h3 class="section-title">LLM-Klassifizierung (Vergleich)</h3>
+          ${renderLlmClassification(row)}
+        </section>
+
+        <section>
+          <h3 class="section-title">Hinweise für höhere Confidence</h3>
           ${renderHints(row)}
+        </section>
+
+        <section class="manual-assignment">
+          <h3 class="section-title">Manuelle Zuordnung</h3>
+          <label class="manual-assignment-label" for="${escapeHtml(manualInputId)}">Zolltarifnummer manuell setzen</label>
+          <input
+            id="${escapeHtml(manualInputId)}"
+            class="manual-assignment-input"
+            type="text"
+            value="${escapeHtml(manualClassification)}"
+            data-row-index="${rowIndex}"
+            placeholder="z. B. 84713000"
+            autocomplete="off"
+          >
         </section>
       </article>
     `;
@@ -228,11 +392,15 @@
   }
 
   function applyFilter() {
-    const displayed = state.filterHigh
-      ? state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) !== "high")
-      : state.rows;
+    const confidenceFilter = normalizeConfidenceFilter(state.confidenceFilter);
+    const rowsAfterAssignmentFilter = state.rows
+      .map((row, rowIndex) => ({ row, rowIndex }))
+      .filter(({ row }) => !state.filterHigh || normalizeConfidenceLabel(row?.confidence) !== "high");
+    const displayed = confidenceFilter === "all"
+      ? rowsAfterAssignmentFilter
+      : rowsAfterAssignmentFilter.filter(({ row }) => normalizeConfidenceLabel(row?.confidence) === confidenceFilter);
 
-    refs.resultsGrid.innerHTML = displayed.map((row) => renderRowCard(row)).join("");
+    refs.resultsGrid.innerHTML = displayed.map(({ row, rowIndex }) => renderRowCard(row, rowIndex)).join("");
 
     const highCount = state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) === "high").length;
     const openCount = state.rows.length - highCount;
@@ -243,7 +411,7 @@
       const dot = panelTitle.querySelector(".panel-dot");
       panelTitle.innerHTML = "";
       if (dot) panelTitle.appendChild(dot);
-      panelTitle.append(state.filterHigh ? " Offene Klassifizierungen" : " Alle Klassifizierungsergebnisse");
+      panelTitle.append(" Offene Klassifizierungen");
     }
 
     if (state.filterHigh) {
@@ -252,7 +420,7 @@
         ? `${openCount} offene Klassifizierung${openCount === 1 ? "" : "en"} – bitte manuell prüfen`
         : "Alle Ergebnisse haben High Confidence ✓";
     } else {
-      refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
+      refs.filterHighBtn.textContent = "Alle High Confidence Werte zuweisen";
       refs.filterInfo.textContent = `${highCount} High-Confidence-Ergebnis${highCount === 1 ? "" : "se"} verfügbar`;
     }
 
@@ -260,12 +428,29 @@
   }
 
   function renderRows(rows) {
-    state.rows = rows;
+    const previousRows = state.rows;
+    const manualByKey = new Map(
+      previousRows
+        .map((row) => [rowKey(row), String(row?.manualClassification || "")])
+        .filter(([, value]) => value.length > 0)
+    );
+    state.rows = rows.map((row, rowIndex) => {
+      const manualFromIndex = previousRows[rowIndex]?.manualClassification;
+      if (typeof manualFromIndex === "string") {
+        return { ...row, manualClassification: manualFromIndex };
+      }
+      const manualFromKey = manualByKey.get(rowKey(row));
+      if (manualFromKey != null) {
+        return { ...row, manualClassification: manualFromKey };
+      }
+      return row;
+    });
     refs.resultsPanel.hidden = false;
     refs.filterPanel.hidden = false;
     refs.resultsSection.hidden = false;
     applyFilter();
     updateExportState();
+    updateLlmControls();
   }
 
   function readErrorMessage(errorPayload, fallbackMessage) {
@@ -278,6 +463,71 @@
       .join(" ");
 
     return message || fallbackMessage;
+  }
+
+  function stopLlmPolling() {
+    if (state.llmPollTimer) {
+      clearTimeout(state.llmPollTimer);
+      state.llmPollTimer = null;
+    }
+    state.llmJobId = null;
+    state.llmPollStartedAt = null;
+  }
+
+  async function pollLlmResults() {
+    const jobId = state.llmJobId;
+    if (!jobId) {
+      return;
+    }
+
+    if (state.llmPollStartedAt && Date.now() - state.llmPollStartedAt > 20 * 60 * 1000) {
+      stopLlmPolling();
+      setStatus("KI-Anreicherung hat das Zeitlimit überschritten. Bitte erneut versuchen oder Batchgröße reduzieren.", "error");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${llmStatusEndpoint}/${encodeURIComponent(jobId)}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
+
+      const text = await response.text();
+      const payload = text.trim().length > 0 ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(readErrorMessage(payload, `LLM-Statusabfrage fehlgeschlagen (HTTP ${response.status}).`));
+      }
+
+      const rows = getItemsFromPayload(payload);
+      if (rows) {
+        renderRows(rows);
+        updateSummary(state.file?.name || "(unbekannt)", rows, true);
+      }
+
+      const jobStatus = String(payload?.llmJobStatus || "").toLowerCase();
+      if (jobStatus === "completed") {
+        stopLlmPolling();
+        setStatus(`KI-Anreicherung abgeschlossen. ${state.rows.length} Ergebnisse inklusive KI-Ausgabe geladen.`, "ok");
+        return;
+      }
+
+      if (jobStatus === "failed") {
+        stopLlmPolling();
+        const details = typeof payload?.message === "string" && payload.message.trim().length > 0
+          ? `: ${payload.message.trim()}`
+          : "";
+        setStatus(`Lokale Klassifizierung erfolgreich, aber KI-Anreicherung ist fehlgeschlagen${details}`, "error");
+        return;
+      }
+
+      setStatus(`Lokale Klassifizierung fertig (${state.rows.length}). KI-Ergebnisse werden nachgeladen ...`, "loading");
+      state.llmPollTimer = setTimeout(pollLlmResults, 1500);
+    } catch (error) {
+      stopLlmPolling();
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(`Lokale Klassifizierung fertig, KI-Status konnte nicht aktualisiert werden: ${message}`, "error");
+    }
   }
 
   function selectFile(file) {
@@ -297,7 +547,7 @@
 
   function exportCsv() {
     if (state.uploading || state.rows.length === 0) {
-      setStatus("Keine Ergebnisse verfuegbar. Fuehre erst einen Upload aus.", "error");
+      setStatus("Keine Ergebnisse verfügbar. Führe erst einen Upload aus.", "error");
       return;
     }
 
@@ -305,7 +555,8 @@
       "Materialnummer",
       "Kurztext",
       "Einkaufsbestelltext",
-      "Zolltarifnummern"
+      "Zolltarifnummern",
+      "Confidence-Prozent"
     ];
 
     const lines = [headers.map(csvCell).join(";")];
@@ -315,16 +566,23 @@
       const topCode = Array.isArray(row?.candidates) && row.candidates[0]?.code
         ? row.candidates[0].code
         : "";
+      const manualClassification = String(row?.manualClassification || "").trim();
+      const hasManualClassification = manualClassification.length > 0;
 
       // Filter aktiv: Zolltarifnummer nur bei High Confidence, sonst leer
       // Filter inaktiv: Zolltarifnummer immer mit Top-Kandidat
-      const zolltarifnummer = state.filterHigh ? (isHigh ? topCode : "") : topCode;
+      const autoClassification = state.filterHigh ? (isHigh ? topCode : "") : topCode;
+      const zolltarifnummer = hasManualClassification ? manualClassification : autoClassification;
+      const confidenceForExport = hasManualClassification
+        ? "manuell zugeordnet"
+        : (zolltarifnummer ? `${scoreFromRow(row).toFixed(1)}%` : "");
 
       lines.push([
         row?.materialNumber || "",
         row?.shortText || "",
         row?.purchaseText || "",
-        zolltarifnummer
+        zolltarifnummer,
+        confidenceForExport
       ].map(csvCell).join(";"));
     }
 
@@ -394,6 +652,7 @@
       return;
     }
 
+    stopLlmPolling();
     setBusy(true);
     setStatus(`${state.file.name} wird hochgeladen ...`, "loading");
 
@@ -416,7 +675,7 @@
         try {
           payload = JSON.parse(text);
         } catch (_) {
-          throw new Error("Der Server hat fehlerhaftes JSON zuruckgegeben.");
+          throw new Error("Der Server hat fehlerhaftes JSON zurückgegeben.");
         }
       }
 
@@ -435,18 +694,97 @@
 
       renderRows(rows);
       updateSummary(state.file?.name || "(unbekannt)", rows, true);
-      setStatus(`Upload erfolgreich. ${rows.length} Ergebnisse erhalten.`, "ok");
+      state.llmRequested = false;
+      state.llmStarting = false;
+      updateLlmControls();
+      setStatus(`Upload erfolgreich. ${rows.length} lokale Ergebnisse erhalten.`, "ok");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      stopLlmPolling();
+      state.llmRequested = false;
+      state.llmStarting = false;
       state.rows = [];
       updateSummary(state.file?.name || "(unbekannt)", [], false);
       refs.resultsPanel.hidden = true;
       refs.resultsGrid.innerHTML = "";
       refs.resultsSection.hidden = true;
       updateExportState();
+      updateLlmControls();
       setStatus(message, "error");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function startLlmEnrichment() {
+    if (state.uploading || state.llmStarting) {
+      return;
+    }
+
+    if (state.rows.length === 0) {
+      setStatus("Keine Ergebnisse vorhanden. Bitte zuerst CSV analysieren.", "error");
+      return;
+    }
+
+    const hasPending = state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "pending");
+    if (!hasPending) {
+      setStatus("Für diese Ergebnisse ist keine startbare KI-Anreicherung verfügbar.", "error");
+      return;
+    }
+
+    stopLlmPolling();
+    state.llmRequested = true;
+    state.llmStarting = true;
+    updateLlmControls();
+    setStatus("KI-Anreicherung wird gestartet ...", "loading");
+
+    try {
+      const response = await fetch(llmStartEndpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(state.rows)
+      });
+
+      const text = await response.text();
+      const payload = text.trim().length > 0 ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(readErrorMessage(payload, `KI-Start fehlgeschlagen (HTTP ${response.status}).`));
+      }
+
+      const rows = getItemsFromPayload(payload);
+      if (!rows) {
+        throw new Error("Unerwartete Antwortstruktur beim Start der KI-Anreicherung.");
+      }
+
+      renderRows(rows);
+      updateSummary(state.file?.name || "(unbekannt)", rows, true);
+
+      const llmJobId = typeof payload?.llmJobId === "string" ? payload.llmJobId : null;
+      const llmJobStatus = String(payload?.llmJobStatus || "").toLowerCase();
+      if (llmJobId && llmJobStatus === "processing") {
+        state.llmJobId = llmJobId;
+        state.llmPollStartedAt = Date.now();
+        setStatus(`KI-Anreicherung gestartet (${rows.length} Zeilen). Ergebnisse werden nachgeladen ...`, "loading");
+        state.llmPollTimer = setTimeout(pollLlmResults, 1200);
+      } else if (llmJobStatus === "completed") {
+        setStatus(`KI-Anreicherung abgeschlossen. ${rows.length} Ergebnisse geladen.`, "ok");
+      } else if (llmJobStatus === "skipped") {
+        state.llmRequested = false;
+        setStatus("KI-Anreicherung ist für diese Ergebnisse nicht verfügbar.", "error");
+      } else {
+        state.llmRequested = false;
+        setStatus("KI-Anreicherung konnte nicht gestartet werden.", "error");
+      }
+    } catch (error) {
+      state.llmRequested = false;
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(message, "error");
+    } finally {
+      state.llmStarting = false;
+      updateLlmControls();
     }
   }
 
@@ -455,6 +793,7 @@
       return;
     }
 
+    stopLlmPolling();
     resetFileSelection();
     clearResults();
     setStatus("Auswahl und Ergebnisse wurden entfernt.");
@@ -514,11 +853,26 @@
   refs.uploadBtn.addEventListener("click", uploadCsv);
   refs.exportBtn.addEventListener("click", exportCsv);
   refs.clearBtn.addEventListener("click", clearAll);
+  refs.startLlmBtn.addEventListener("click", startLlmEnrichment);
 
   refs.filterHighBtn.addEventListener("click", () => {
     if (state.rows.length === 0) return;
     state.filterHigh = !state.filterHigh;
     applyFilter();
+  });
+
+  refs.resultsConfidenceFilter.addEventListener("change", (event) => {
+    state.confidenceFilter = normalizeConfidenceFilter(event.target.value);
+    applyFilter();
+  });
+
+  refs.resultsGrid.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.classList.contains("manual-assignment-input")) return;
+    const rowIndex = Number(target.dataset.rowIndex);
+    if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= state.rows.length) return;
+    state.rows[rowIndex].manualClassification = target.value;
   });
 
   clearResults();
