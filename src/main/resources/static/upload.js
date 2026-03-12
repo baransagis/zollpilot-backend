@@ -57,6 +57,14 @@
     refs.filterHighBtn.classList.remove("active");
     refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
     refs.filterInfo.textContent = "";
+    // Panel-Titel zurücksetzen
+    const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
+    if (panelTitle) {
+      const dot = panelTitle.querySelector(".panel-dot");
+      panelTitle.innerHTML = "";
+      if (dot) panelTitle.appendChild(dot);
+      panelTitle.append(" Offene Klassifizierungen");
+    }
     updateExportState();
     updateButtonStates();
   }
@@ -221,16 +229,28 @@
 
   function applyFilter() {
     const displayed = state.filterHigh
-      ? state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) === "high")
+      ? state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) !== "high")
       : state.rows;
 
     refs.resultsGrid.innerHTML = displayed.map((row) => renderRowCard(row)).join("");
 
     const highCount = state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) === "high").length;
+    const openCount = state.rows.length - highCount;
+
+    // Panel-Titel dynamisch anpassen
+    const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
+    if (panelTitle) {
+      const dot = panelTitle.querySelector(".panel-dot");
+      panelTitle.innerHTML = "";
+      if (dot) panelTitle.appendChild(dot);
+      panelTitle.append(state.filterHigh ? " Offene Klassifizierungen" : " Alle Klassifizierungsergebnisse");
+    }
 
     if (state.filterHigh) {
       refs.filterHighBtn.textContent = "Zuweisung aufheben – Alle anzeigen";
-      refs.filterInfo.textContent = `${displayed.length} von ${state.rows.length} Ergebnissen werden angezeigt`;
+      refs.filterInfo.textContent = openCount > 0
+        ? `${openCount} offene Klassifizierung${openCount === 1 ? "" : "en"} – bitte manuell prüfen`
+        : "Alle Ergebnisse haben High Confidence ✓";
     } else {
       refs.filterHighBtn.textContent = "Nur High Confidence Werte zuweisen";
       refs.filterInfo.textContent = `${highCount} High-Confidence-Ergebnis${highCount === 1 ? "" : "se"} verfügbar`;
