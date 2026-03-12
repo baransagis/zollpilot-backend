@@ -6,6 +6,7 @@
     fileInput: document.getElementById("fileInput"),
     selectedFile: document.getElementById("selectedFile"),
     uploadBtn: document.getElementById("uploadBtn"),
+    exportBtn: document.getElementById("exportBtn"),
     clearBtn: document.getElementById("clearBtn"),
     status: document.getElementById("status"),
     summarySection: document.getElementById("summarySection"),
@@ -20,6 +21,7 @@
 
   const state = {
     file: null,
+    rows: [],
     uploading: false
   };
 
@@ -38,10 +40,12 @@
   }
 
   function clearResults() {
+    state.rows = [];
     refs.summarySection.hidden = true;
     refs.resultsSection.hidden = true;
     refs.resultsGrid.innerHTML = "";
     refs.emptyState.hidden = false;
+    updateExportState();
   }
 
   function resetFileSelection() {
@@ -56,6 +60,11 @@
     refs.clearBtn.disabled = isBusy;
     refs.fileInput.disabled = isBusy;
     refs.dropzone.setAttribute("aria-disabled", String(isBusy));
+    updateExportState();
+  }
+
+  function updateExportState() {
+    refs.exportBtn.disabled = state.uploading || state.rows.length === 0;
   }
 
   function isCsvFile(file) {
@@ -120,6 +129,9 @@
 
   function renderHints(row) {
     const hints = Array.isArray(row?.missingInformation) ? row.missingInformation : [];
+    if (hints.length === 0) {
+      return '<p class="no-hints">Keine weiteren Angaben erforderlich.</p>';
+    }
 
     const items = hints.map((hint) => `<li>${escapeHtml(hint)}</li>`).join("");
     return `<ul class="hints">${items}</ul>`;
@@ -188,9 +200,11 @@
   }
 
   function renderRows(rows) {
+    state.rows = rows;
     refs.emptyState.hidden = true;
     refs.resultsSection.hidden = false;
     refs.resultsGrid.innerHTML = rows.map((row) => renderRowCard(row)).join("");
+    updateExportState();
   }
 
   function readErrorMessage(errorPayload, fallbackMessage) {
@@ -212,6 +226,88 @@
 
     state.file = file;
     refs.selectedFile.textContent = `${file.name} (${file.size} bytes)`;
+  }
+
+  function csvCell(value) {
+    const text = String(value ?? "").replace(/\r?\n/g, " ");
+    return `"${text.replace(/"/g, "\"\"")}"`;
+  }
+
+  function formatPercent(value) {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric)) {
+      return numeric.toFixed(1);
+    }
+    return "0.0";
+  }
+
+  function exportCsv() {
+    if (state.uploading || state.rows.length === 0) {
+      setStatus("Keine Ergebnisse verfuegbar. Fuehre erst einen Upload aus.", "error");
+      return;
+    }
+
+    const headers = [
+      "Materialnummer",
+      "Kurztext",
+      "Einkaufsbestelltext",
+      "Confidence-Level",
+      "Confidence-Score",
+      "Kandidat 1 Code",
+      "Kandidat 1 Bezeichnung",
+      "Kandidat 1 Score",
+      "Kandidat 2 Code",
+      "Kandidat 2 Bezeichnung",
+      "Kandidat 2 Score",
+      "Kandidat 3 Code",
+      "Kandidat 3 Bezeichnung",
+      "Kandidat 3 Score",
+      "Hinweise"
+    ];
+
+    const lines = [headers.map(csvCell).join(";")];
+
+    for (const row of state.rows) {
+      const candidates = Array.isArray(row?.candidates) ? row.candidates : [];
+      const hints = Array.isArray(row?.missingInformation) ? row.missingInformation.join(" | ") : "";
+
+      lines.push([
+        row?.materialNumber || "",
+        row?.shortText || "",
+        row?.purchaseText || "",
+        confidenceLabel(row?.confidence),
+        scoreFromRow(row).toFixed(1),
+        candidates[0]?.code || "",
+        candidates[0]?.label || "",
+        formatPercent(candidates[0]?.score),
+        candidates[1]?.code || "",
+        candidates[1]?.label || "",
+        formatPercent(candidates[1]?.score),
+        candidates[2]?.code || "",
+        candidates[2]?.label || "",
+        formatPercent(candidates[2]?.score),
+        hints
+      ].map(csvCell).join(";"));
+    }
+
+    const csvContent = `\uFEFF${lines.join("\n")}`;
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const date = new Date().toISOString().slice(0, 10);
+    const base = String(state.file?.name || "zollpilot_upload").replace(/\.[^/.]+$/, "");
+    const safeBase = base.replace(/[^a-z0-9_-]+/gi, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+    const fileName = `${safeBase || "zollpilot_upload"}_kn_hs_${date}.csv`;
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    setStatus(`CSV exportiert: ${fileName}`, "ok");
   }
 
   function handleChosenFile(file) {
@@ -299,9 +395,12 @@
       setStatus(`Upload erfolgreich. ${rows.length} Ergebnisse erhalten.`, "ok");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      state.rows = [];
       updateSummary(state.file?.name || "(unbekannt)", [], false);
-      refs.emptyState.hidden = true;
+      refs.resultsGrid.innerHTML = "";
+      refs.emptyState.hidden = false;
       refs.resultsSection.hidden = true;
+      updateExportState();
       setStatus(message, "error");
     } finally {
       setBusy(false);
@@ -370,6 +469,7 @@
   });
 
   refs.uploadBtn.addEventListener("click", uploadCsv);
+  refs.exportBtn.addEventListener("click", exportCsv);
   refs.clearBtn.addEventListener("click", clearAll);
 
   clearResults();
