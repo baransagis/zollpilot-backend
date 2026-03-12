@@ -1,5 +1,6 @@
 (() => {
   const endpoint = "/api/v1/classify/upload-csv";
+  const llmStartEndpoint = "/api/v1/classify/start-llm";
   const llmStatusEndpoint = "/api/v1/classify/llm-status";
 
   const refs = {
@@ -19,6 +20,9 @@
     filterPanel: document.getElementById("filterPanel"),
     filterHighBtn: document.getElementById("filterHighBtn"),
     filterInfo: document.getElementById("filterInfo"),
+    aiPanel: document.getElementById("aiPanel"),
+    startLlmBtn: document.getElementById("startLlmBtn"),
+    llmInfo: document.getElementById("llmInfo"),
     resultsPanel: document.getElementById("resultsPanel"),
     resultsConfidenceFilter: document.getElementById("resultsConfidenceFilter"),
     resultsSection: document.getElementById("resultsSection"),
@@ -32,6 +36,8 @@
     uploading: false,
     filterHigh: false,
     confidenceFilter: "all",
+    llmRequested: false,
+    llmStarting: false,
     llmJobId: null,
     llmPollTimer: null,
     llmPollStartedAt: null
@@ -56,8 +62,11 @@
     state.rows = [];
     state.filterHigh = false;
     state.confidenceFilter = "all";
+    state.llmRequested = false;
+    state.llmStarting = false;
     refs.rightCol.hidden = true;
     refs.filterPanel.hidden = true;
+    refs.aiPanel.hidden = true;
     refs.resultsPanel.hidden = true;
     refs.resultsSection.hidden = true;
     refs.resultsGrid.innerHTML = "";
@@ -65,6 +74,9 @@
     refs.filterHighBtn.classList.remove("active");
     refs.filterHighBtn.textContent = "Alle High Confidence Werte zuweisen";
     refs.filterInfo.textContent = "";
+    refs.startLlmBtn.textContent = "KI-Unterstützung starten";
+    refs.startLlmBtn.disabled = true;
+    refs.llmInfo.textContent = "";
     refs.resultsConfidenceFilter.value = "all";
     // Panel-Titel zurücksetzen
     const panelTitle = refs.resultsPanel.querySelector(".results-header h2");
@@ -89,6 +101,7 @@
     const hasContent = state.rows.length > 0;
     refs.uploadBtn.disabled = state.uploading || !hasFile;
     refs.clearBtn.disabled = state.uploading || (!hasFile && !hasContent);
+    updateLlmControls();
   }
 
   function setBusy(isBusy) {
@@ -101,6 +114,49 @@
 
   function updateExportState() {
     refs.exportBtn.disabled = state.uploading || state.rows.length === 0;
+  }
+
+  function updateLlmControls() {
+    const hasRows = state.rows.length > 0;
+    const hasLlmData = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) !== "skipped");
+    const hasPending = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "pending");
+    const hasCompleted = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "completed");
+    const hasFailed = hasRows && state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "failed");
+    const canStart = hasPending && !state.llmRequested && !state.llmStarting && !state.uploading;
+
+    refs.aiPanel.hidden = !hasLlmData;
+    if (!hasLlmData) {
+      refs.startLlmBtn.textContent = "KI-Unterstützung starten";
+      refs.startLlmBtn.disabled = true;
+      refs.llmInfo.textContent = "";
+      return;
+    }
+
+    if (state.llmStarting) {
+      refs.startLlmBtn.textContent = "KI wird gestartet ...";
+      refs.startLlmBtn.disabled = true;
+      refs.llmInfo.textContent = "KI-Anreicherung wird gestartet und nachgeladen.";
+      return;
+    }
+
+    if (state.llmRequested) {
+      refs.startLlmBtn.textContent = "KI-Unterstützung gestartet";
+      refs.startLlmBtn.disabled = true;
+      if (hasPending) {
+        refs.llmInfo.textContent = "KI-Anreicherung läuft ...";
+      } else if (hasCompleted) {
+        refs.llmInfo.textContent = "KI-Anreicherung abgeschlossen.";
+      } else if (hasFailed) {
+        refs.llmInfo.textContent = "KI-Anreicherung fehlgeschlagen.";
+      } else {
+        refs.llmInfo.textContent = "KI-Unterstützung wurde gestartet.";
+      }
+      return;
+    }
+
+    refs.startLlmBtn.textContent = "KI-Unterstützung starten";
+    refs.startLlmBtn.disabled = !canStart;
+    refs.llmInfo.textContent = "Optional: KI nur bei Bedarf für zusätzliche Einschätzung starten.";
   }
 
   function isCsvFile(file) {
@@ -208,6 +264,9 @@
     const llm = row?.llm;
     const llmStatus = normalizeLlmStatus(row?.llmStatus);
     if (llmStatus === "pending") {
+      if (!state.llmRequested) {
+        return '<p class="llm-empty">KI-Unterstützung noch nicht gestartet.</p>';
+      }
       return `
         <div class="llm-block">
           <p class="llm-headline">KI-Klassifizierung wird verarbeitet ...</p>
@@ -391,6 +450,7 @@
     refs.resultsSection.hidden = false;
     applyFilter();
     updateExportState();
+    updateLlmControls();
   }
 
   function readErrorMessage(errorPayload, fallbackMessage) {
@@ -448,7 +508,7 @@
       const jobStatus = String(payload?.llmJobStatus || "").toLowerCase();
       if (jobStatus === "completed") {
         stopLlmPolling();
-        setStatus(`Upload erfolgreich. ${state.rows.length} Ergebnisse inklusive KI-Ausgabe geladen.`, "ok");
+        setStatus(`KI-Anreicherung abgeschlossen. ${state.rows.length} Ergebnisse inklusive KI-Ausgabe geladen.`, "ok");
         return;
       }
 
@@ -634,29 +694,97 @@
 
       renderRows(rows);
       updateSummary(state.file?.name || "(unbekannt)", rows, true);
-      const llmJobId = typeof payload?.llmJobId === "string" ? payload.llmJobId : null;
-      const llmJobStatus = String(payload?.llmJobStatus || "").toLowerCase();
-
-      if (llmJobId && llmJobStatus === "processing") {
-        state.llmJobId = llmJobId;
-        state.llmPollStartedAt = Date.now();
-        setStatus(`Lokale Klassifizierung fertig (${rows.length}). KI-Ergebnisse werden nachgeladen ...`, "loading");
-        state.llmPollTimer = setTimeout(pollLlmResults, 1200);
-      } else {
-        setStatus(`Upload erfolgreich. ${rows.length} Ergebnisse erhalten.`, "ok");
-      }
+      state.llmRequested = false;
+      state.llmStarting = false;
+      updateLlmControls();
+      setStatus(`Upload erfolgreich. ${rows.length} lokale Ergebnisse erhalten.`, "ok");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       stopLlmPolling();
+      state.llmRequested = false;
+      state.llmStarting = false;
       state.rows = [];
       updateSummary(state.file?.name || "(unbekannt)", [], false);
       refs.resultsPanel.hidden = true;
       refs.resultsGrid.innerHTML = "";
       refs.resultsSection.hidden = true;
       updateExportState();
+      updateLlmControls();
       setStatus(message, "error");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function startLlmEnrichment() {
+    if (state.uploading || state.llmStarting) {
+      return;
+    }
+
+    if (state.rows.length === 0) {
+      setStatus("Keine Ergebnisse vorhanden. Bitte zuerst CSV analysieren.", "error");
+      return;
+    }
+
+    const hasPending = state.rows.some((row) => normalizeLlmStatus(row?.llmStatus) === "pending");
+    if (!hasPending) {
+      setStatus("Für diese Ergebnisse ist keine startbare KI-Anreicherung verfügbar.", "error");
+      return;
+    }
+
+    stopLlmPolling();
+    state.llmRequested = true;
+    state.llmStarting = true;
+    updateLlmControls();
+    setStatus("KI-Anreicherung wird gestartet ...", "loading");
+
+    try {
+      const response = await fetch(llmStartEndpoint, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(state.rows)
+      });
+
+      const text = await response.text();
+      const payload = text.trim().length > 0 ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(readErrorMessage(payload, `KI-Start fehlgeschlagen (HTTP ${response.status}).`));
+      }
+
+      const rows = getItemsFromPayload(payload);
+      if (!rows) {
+        throw new Error("Unerwartete Antwortstruktur beim Start der KI-Anreicherung.");
+      }
+
+      renderRows(rows);
+      updateSummary(state.file?.name || "(unbekannt)", rows, true);
+
+      const llmJobId = typeof payload?.llmJobId === "string" ? payload.llmJobId : null;
+      const llmJobStatus = String(payload?.llmJobStatus || "").toLowerCase();
+      if (llmJobId && llmJobStatus === "processing") {
+        state.llmJobId = llmJobId;
+        state.llmPollStartedAt = Date.now();
+        setStatus(`KI-Anreicherung gestartet (${rows.length} Zeilen). Ergebnisse werden nachgeladen ...`, "loading");
+        state.llmPollTimer = setTimeout(pollLlmResults, 1200);
+      } else if (llmJobStatus === "completed") {
+        setStatus(`KI-Anreicherung abgeschlossen. ${rows.length} Ergebnisse geladen.`, "ok");
+      } else if (llmJobStatus === "skipped") {
+        state.llmRequested = false;
+        setStatus("KI-Anreicherung ist für diese Ergebnisse nicht verfügbar.", "error");
+      } else {
+        state.llmRequested = false;
+        setStatus("KI-Anreicherung konnte nicht gestartet werden.", "error");
+      }
+    } catch (error) {
+      state.llmRequested = false;
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus(message, "error");
+    } finally {
+      state.llmStarting = false;
+      updateLlmControls();
     }
   }
 
@@ -725,6 +853,7 @@
   refs.uploadBtn.addEventListener("click", uploadCsv);
   refs.exportBtn.addEventListener("click", exportCsv);
   refs.clearBtn.addEventListener("click", clearAll);
+  refs.startLlmBtn.addEventListener("click", startLlmEnrichment);
 
   refs.filterHighBtn.addEventListener("click", () => {
     if (state.rows.length === 0) return;

@@ -1,7 +1,10 @@
 package com.zollpilot.api
 
 import com.zollpilot.config.AppConfig
+import com.zollpilot.domain.ClassificationBatchResponse
+import com.zollpilot.domain.ClassificationResult
 import com.zollpilot.domain.ErrorResponse
+import com.zollpilot.domain.LlmJobStatus
 import com.zollpilot.domain.MaterialInput
 import com.zollpilot.domain.MaterialRequest
 import com.zollpilot.parser.CsvParser
@@ -93,6 +96,16 @@ fun Route.classificationRoutes(
 
             val rows = csvParser.parse(ByteArrayInputStream(bytes))
             val localResults = classificationService.classifyBatchLocalFirst(rows)
+            call.respond(
+                ClassificationBatchResponse(
+                    results = localResults,
+                    llmJobStatus = LlmJobStatus.SKIPPED,
+                ),
+            )
+        }
+
+        post("/start-llm") {
+            val localResults = call.receive<List<ClassificationResult>>()
             val response = llmEnrichmentCoordinator.start(localResults)
             call.respond(response)
         }
