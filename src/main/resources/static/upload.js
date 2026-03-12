@@ -158,6 +158,13 @@
     return "Niedrig";
   }
 
+  function rowKey(row) {
+    const materialNumber = String(row?.materialNumber || "");
+    const shortText = String(row?.shortText || "");
+    const purchaseText = String(row?.purchaseText || "");
+    return `${materialNumber}::${shortText}::${purchaseText}`;
+  }
+
   function renderCandidate(candidate) {
     const score = Number(candidate?.score);
     const safeScore = Number.isFinite(score) ? score.toFixed(1) : "0.0";
@@ -241,10 +248,12 @@
     `;
   }
 
-  function renderRowCard(row) {
+  function renderRowCard(row, rowIndex) {
     const confidence = normalizeConfidenceLabel(row?.confidence);
     const score = scoreFromRow(row);
     const candidates = Array.isArray(row?.candidates) ? row.candidates.slice(0, 3) : [];
+    const manualClassification = String(row?.manualClassification || "");
+    const manualInputId = `manualClassification-${rowIndex}`;
 
     const candidatesHtml = candidates.length > 0
       ? candidates.map(renderCandidate).join("")
@@ -292,6 +301,20 @@
           <h3 class="section-title">Hinweise für höhere Confidence</h3>
           ${renderHints(row)}
         </section>
+
+        <section class="manual-assignment">
+          <h3 class="section-title">Manuelle Zuordnung</h3>
+          <label class="manual-assignment-label" for="${escapeHtml(manualInputId)}">Zolltarifnummer manuell setzen</label>
+          <input
+            id="${escapeHtml(manualInputId)}"
+            class="manual-assignment-input"
+            type="text"
+            value="${escapeHtml(manualClassification)}"
+            data-row-index="${rowIndex}"
+            placeholder="z. B. 84713000"
+            autocomplete="off"
+          >
+        </section>
       </article>
     `;
   }
@@ -311,14 +334,14 @@
 
   function applyFilter() {
     const confidenceFilter = normalizeConfidenceFilter(state.confidenceFilter);
-    const rowsAfterAssignmentFilter = state.filterHigh
-      ? state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) !== "high")
-      : state.rows;
+    const rowsAfterAssignmentFilter = state.rows
+      .map((row, rowIndex) => ({ row, rowIndex }))
+      .filter(({ row }) => !state.filterHigh || normalizeConfidenceLabel(row?.confidence) !== "high");
     const displayed = confidenceFilter === "all"
       ? rowsAfterAssignmentFilter
-      : rowsAfterAssignmentFilter.filter((row) => normalizeConfidenceLabel(row?.confidence) === confidenceFilter);
+      : rowsAfterAssignmentFilter.filter(({ row }) => normalizeConfidenceLabel(row?.confidence) === confidenceFilter);
 
-    refs.resultsGrid.innerHTML = displayed.map((row) => renderRowCard(row)).join("");
+    refs.resultsGrid.innerHTML = displayed.map(({ row, rowIndex }) => renderRowCard(row, rowIndex)).join("");
 
     const highCount = state.rows.filter((row) => normalizeConfidenceLabel(row?.confidence) === "high").length;
     const openCount = state.rows.length - highCount;
@@ -346,7 +369,23 @@
   }
 
   function renderRows(rows) {
-    state.rows = rows;
+    const previousRows = state.rows;
+    const manualByKey = new Map(
+      previousRows
+        .map((row) => [rowKey(row), String(row?.manualClassification || "")])
+        .filter(([, value]) => value.length > 0)
+    );
+    state.rows = rows.map((row, rowIndex) => {
+      const manualFromIndex = previousRows[rowIndex]?.manualClassification;
+      if (typeof manualFromIndex === "string") {
+        return { ...row, manualClassification: manualFromIndex };
+      }
+      const manualFromKey = manualByKey.get(rowKey(row));
+      if (manualFromKey != null) {
+        return { ...row, manualClassification: manualFromKey };
+      }
+      return row;
+    });
     refs.resultsPanel.hidden = false;
     refs.filterPanel.hidden = false;
     refs.resultsSection.hidden = false;
@@ -456,7 +495,8 @@
       "Materialnummer",
       "Kurztext",
       "Einkaufsbestelltext",
-      "Zolltarifnummern"
+      "Zolltarifnummern",
+      "Confidence-Prozent"
     ];
 
     const lines = [headers.map(csvCell).join(";")];
@@ -466,16 +506,23 @@
       const topCode = Array.isArray(row?.candidates) && row.candidates[0]?.code
         ? row.candidates[0].code
         : "";
+      const manualClassification = String(row?.manualClassification || "").trim();
+      const hasManualClassification = manualClassification.length > 0;
 
       // Filter aktiv: Zolltarifnummer nur bei High Confidence, sonst leer
       // Filter inaktiv: Zolltarifnummer immer mit Top-Kandidat
-      const zolltarifnummer = state.filterHigh ? (isHigh ? topCode : "") : topCode;
+      const autoClassification = state.filterHigh ? (isHigh ? topCode : "") : topCode;
+      const zolltarifnummer = hasManualClassification ? manualClassification : autoClassification;
+      const confidenceForExport = hasManualClassification
+        ? "manuell zugeordnet"
+        : (zolltarifnummer ? `${scoreFromRow(row).toFixed(1)}%` : "");
 
       lines.push([
         row?.materialNumber || "",
         row?.shortText || "",
         row?.purchaseText || "",
-        zolltarifnummer
+        zolltarifnummer,
+        confidenceForExport
       ].map(csvCell).join(";"));
     }
 
@@ -688,6 +735,15 @@
   refs.resultsConfidenceFilter.addEventListener("change", (event) => {
     state.confidenceFilter = normalizeConfidenceFilter(event.target.value);
     applyFilter();
+  });
+
+  refs.resultsGrid.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    if (!target.classList.contains("manual-assignment-input")) return;
+    const rowIndex = Number(target.dataset.rowIndex);
+    if (!Number.isInteger(rowIndex) || rowIndex < 0 || rowIndex >= state.rows.length) return;
+    state.rows[rowIndex].manualClassification = target.value;
   });
 
   clearResults();
