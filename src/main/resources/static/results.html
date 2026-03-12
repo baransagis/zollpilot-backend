@@ -378,7 +378,6 @@
 
     .attr h3,
     .candidates h3,
-    .llm h3,
     .missing h3 {
       margin: 0 0 6px;
       font-size: 0.76rem;
@@ -461,70 +460,6 @@
       font-size: 0.82rem;
     }
 
-    .llm-panel {
-      border: 1px solid #d5e4ef;
-      border-radius: 11px;
-      background: #f6fbff;
-      padding: 10px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .llm-headline {
-      margin: 0;
-      color: #173447;
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-
-    .llm-meta {
-      margin: 0;
-      color: #4b6475;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-
-    .llm-explanation {
-      margin: 0;
-      color: #335469;
-      font-size: 0.83rem;
-      line-height: 1.5;
-    }
-
-    .llm-candidates {
-      margin: 0;
-      padding-left: 18px;
-      color: #335469;
-      font-size: 0.81rem;
-      display: grid;
-      gap: 5px;
-    }
-
-    .llm-empty {
-      margin: 0;
-      color: #6a7f8f;
-      font-size: 0.82rem;
-    }
-
-    .llm-loading {
-      margin: 0;
-      color: #335469;
-      font-size: 0.8rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .spinner {
-      width: 14px;
-      height: 14px;
-      border: 2px solid rgba(23, 103, 160, 0.2);
-      border-top-color: #1677a0;
-      border-radius: 999px;
-      animation: spin 0.9s linear infinite;
-      flex-shrink: 0;
-    }
-
     .empty-state {
       grid-column: 1 / -1;
       border: 1px dashed #bfd0db;
@@ -566,12 +501,6 @@
       to {
         opacity: 1;
         transform: translateY(0);
-      }
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
       }
     }
 
@@ -637,13 +566,9 @@
   <script>
     (() => {
       const endpoint = "/test-resource-csv";
-      const llmStatusEndpoint = "/api/v1/classify/llm-status";
       const state = {
         rows: [],
-        filtered: [],
-        llmJobId: null,
-        llmPollTimer: null,
-        llmPollStartedAt: null
+        filtered: []
       };
 
       const refs = {
@@ -681,15 +606,6 @@
       function setStatus(message, type = "") {
         refs.status.textContent = message;
         refs.status.className = `status ${type}`.trim();
-      }
-
-      function stopLlmPolling() {
-        if (state.llmPollTimer) {
-          clearTimeout(state.llmPollTimer);
-          state.llmPollTimer = null;
-        }
-        state.llmJobId = null;
-        state.llmPollStartedAt = null;
       }
 
       function chips(values) {
@@ -750,62 +666,6 @@
           <div class="attr">
             <h3>${escapeHtml(label)}</h3>
             <div class="chips">${chips(values)}</div>
-          </div>
-        `;
-      }
-
-      function llmConfidence(value) {
-        const numeric = Number(value);
-        if (Number.isFinite(numeric)) {
-          return Math.max(0, Math.min(100, Math.round(numeric)));
-        }
-        return null;
-      }
-
-      function normalizeLlmStatus(value) {
-        const status = String(value || "").toLowerCase();
-        if (status === "pending" || status === "completed" || status === "failed" || status === "skipped") {
-          return status;
-        }
-        return "";
-      }
-
-      function llmSection(row) {
-        const llmStatus = normalizeLlmStatus(row?.llmStatus);
-        if (llmStatus === "pending") {
-          return `
-            <div class="llm-panel">
-              <p class="llm-headline">KI-Klassifizierung wird verarbeitet ...</p>
-              <p class="llm-loading"><span class="spinner" aria-hidden="true"></span> Ergebnis wird nachgeladen.</p>
-            </div>
-          `;
-        }
-
-        if (llmStatus === "failed") {
-          return '<p class="llm-empty">LLM-Ergebnis konnte nicht erzeugt werden. Lokales Ergebnis bleibt sichtbar.</p>';
-        }
-
-        if (llmStatus === "skipped") {
-          return '<p class="llm-empty">LLM-Anreicherung ist deaktiviert oder nicht konfiguriert.</p>';
-        }
-
-        const llm = row?.llm;
-        if (!llm || typeof llm !== "object") {
-          return '<p class="llm-empty">Kein LLM-Ergebnis verfügbar.</p>';
-        }
-
-        const confidence = llmConfidence(llm.confidencePercent);
-        const candidateHeadlines = Array.isArray(llm.candidateHeadlines) ? llm.candidateHeadlines : [];
-        const candidatesHtml = candidateHeadlines.length > 0
-          ? `<ul class="llm-candidates">${candidateHeadlines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-          : '<p class="llm-empty">Keine LLM-Kandidatenzeilen vorhanden.</p>';
-
-        return `
-          <div class="llm-panel">
-            <p class="llm-headline">${escapeHtml(llm.headline || "Ohne LLM-Headline")}</p>
-            <p class="llm-meta">Gewählte CN: <strong>${escapeHtml(llm.selectedCnCode || "k. A.")}</strong> | LLM-Confidence: <strong>${confidence === null ? "k. A." : `${confidence}%`}</strong></p>
-            <p class="llm-explanation">${escapeHtml(llm.explanation || "Keine Begründung vorhanden.")}</p>
-            ${candidatesHtml}
           </div>
         `;
       }
@@ -872,11 +732,6 @@
               <ul class="candidate-list">${candidatesHtml}</ul>
             </section>
 
-            <section class="llm">
-              <h3>LLM-Klassifizierung (Vergleich)</h3>
-              ${llmSection(row)}
-            </section>
-
             <section class="attr-grid">
               ${attributeSection("Abmessungen", attributes.dimensions)}
               ${attributeSection("Normen", attributes.norms)}
@@ -923,11 +778,7 @@
             row.purchaseText,
             row.normalizedText,
             row.normalizedFamily,
-            ...(row.candidates || []).flatMap((candidate) => [candidate.code, candidate.label]),
-            row.llm?.headline,
-            row.llm?.selectedCnCode,
-            row.llm?.explanation,
-            ...(row.llm?.candidateHeadlines || [])
+            ...(row.candidates || []).flatMap((candidate) => [candidate.code, candidate.label])
           ]
             .map((value) => String(value || "").toLowerCase())
             .join(" ");
@@ -943,60 +794,7 @@
         refs.results.innerHTML = [0, 1, 2].map(() => '<article class="result-card skeleton"></article>').join("");
       }
 
-      async function pollLlmResults() {
-        const jobId = state.llmJobId;
-        if (!jobId) {
-          return;
-        }
-        if (state.llmPollStartedAt && Date.now() - state.llmPollStartedAt > 10 * 60 * 1000) {
-          stopLlmPolling();
-          setStatus("KI-Anreicherung hat das Zeitlimit überschritten. Bitte neu laden.", "error");
-          return;
-        }
-
-        try {
-          const response = await fetch(`${llmStatusEndpoint}/${encodeURIComponent(jobId)}`, {
-            method: "GET",
-            headers: { "Accept": "application/json" },
-            cache: "no-store"
-          });
-
-          const text = await response.text();
-          const payload = text.trim().length > 0 ? JSON.parse(text) : null;
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
-
-          const rows = Array.isArray(payload?.results) ? payload.results : null;
-          if (rows) {
-            state.rows = rows;
-            applyFilters();
-          }
-
-          const jobStatus = String(payload?.llmJobStatus || "").toLowerCase();
-          if (jobStatus === "completed") {
-            stopLlmPolling();
-            setStatus(`${state.rows.length} Zeilen inklusive KI-Ausgabe geladen.`, "ok");
-            return;
-          }
-
-          if (jobStatus === "failed") {
-            stopLlmPolling();
-            setStatus("Lokale Ergebnisse geladen, KI-Anreicherung ist fehlgeschlagen.", "error");
-            return;
-          }
-
-          setStatus(`${state.rows.length} lokale Zeilen geladen. KI-Ergebnisse werden nachgeladen ...`, "loading");
-          state.llmPollTimer = setTimeout(pollLlmResults, 1500);
-        } catch (error) {
-          stopLlmPolling();
-          const message = error instanceof Error ? error.message : String(error);
-          setStatus(`KI-Status konnte nicht aktualisiert werden: ${message}`, "error");
-        }
-      }
-
       async function loadData() {
-        stopLlmPolling();
         refs.reloadBtn.disabled = true;
         showLoading();
         setStatus(`Daten von ${endpoint} werden geladen ...`);
@@ -1028,17 +826,7 @@
 
           const now = new Date();
           refs.lastRefresh.textContent = `Letzte Aktualisierung: ${now.toLocaleString()}`;
-          const llmJobId = typeof payload?.llmJobId === "string" ? payload.llmJobId : null;
-          const llmJobStatus = String(payload?.llmJobStatus || "").toLowerCase();
-
-          if (llmJobId && llmJobStatus === "processing") {
-            state.llmJobId = llmJobId;
-            state.llmPollStartedAt = Date.now();
-            setStatus(`${state.rows.length} lokale Zeilen geladen. KI-Ergebnisse werden nachgeladen ...`, "loading");
-            state.llmPollTimer = setTimeout(pollLlmResults, 1200);
-          } else {
-            setStatus(`${state.rows.length} Zeilen von ${endpoint} geladen.`, "ok");
-          }
+          setStatus(`${state.rows.length} Zeilen von ${endpoint} geladen.`, "ok");
         } catch (error) {
           refs.summary.innerHTML = "";
           refs.results.innerHTML = '<div class="empty-state">Daten konnten nicht geladen werden. Bitte Backend-Status und Endpunktpfad prufen.</div>';
