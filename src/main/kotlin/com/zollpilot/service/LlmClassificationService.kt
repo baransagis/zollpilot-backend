@@ -232,7 +232,6 @@ class LlmClassificationService(
                 reasons = candidate.reasons.take(2).map { truncate(it, 100) },
             )
         },
-        localConfidence = result.confidence.name.lowercase(),
         missingInformation = result.missingInformation.take(3).map { truncate(it, 100) },
     )
 
@@ -282,7 +281,6 @@ class LlmClassificationService(
             item.purchaseText.length +
             item.normalizedText.length +
             (item.normalizedFamily?.length ?: 0) +
-            item.localConfidence.length +
             candidateReasonsChars +
             candidateLabelChars +
             attributesChars +
@@ -547,7 +545,6 @@ class LlmClassificationService(
         val normalizedText: String,
         val attributes: PromptAttributes,
         val localCandidates: List<PromptCandidate>,
-        val localConfidence: String,
         val missingInformation: List<String>,
     )
 
@@ -615,7 +612,9 @@ Regeln:
    - Nur doppelte Anfuehrungszeichen fuer Strings
    - Newlines in Strings korrekt escapen
 11) `confidencePercent` zwischen 0 und 100.
-12) Ausgabe muss strikt dem JSON-Schema entsprechen.
+12) `confidencePercent` MUSS die KI-Sicherheit ausdruecken und darf NICHT einfach lokale Scores oder lokale Confidence spiegeln.
+13) Kalibrierung fuer `confidencePercent`: >85 nur bei starker, konsistenter Evidenz; 60-85 bei plausibel aber mit Restunsicherheit; <60 bei mehreren offenen Punkten.
+14) Ausgabe muss strikt dem JSON-Schema entsprechen.
 """
     }
 }

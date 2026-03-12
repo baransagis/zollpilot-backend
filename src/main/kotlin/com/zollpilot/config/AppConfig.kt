@@ -39,7 +39,7 @@ fun Application.loadAppConfig(): AppConfig {
                 )?.trim()?.takeIf { it.isNotEmpty() },
             endpoint = config.propertyOrNull("app.llm.endpoint")?.getString()
                 ?: "https://api.openai.com/v1/chat/completions",
-            model = config.propertyOrNull("app.llm.model")?.getString() ?: "gpt-4o-mini",
+            model = config.propertyOrNull("app.llm.model")?.getString() ?: "gpt-4.1-mini",
             maxItemsPerRequest = (
                 config.propertyOrNull("app.llm.maxItemsPerRequest")?.getString()?.toIntOrNull() ?: 12
                 ).coerceAtLeast(1),
