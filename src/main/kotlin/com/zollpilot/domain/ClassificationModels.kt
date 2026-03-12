@@ -22,7 +22,7 @@ data class ExtractedAttributes(
 
 @Serializable
 data class RankedCandidate(
-    val code: String,
+    val code: String?,
     val label: String,
     val score: Double,
     val reasons: List<String>,

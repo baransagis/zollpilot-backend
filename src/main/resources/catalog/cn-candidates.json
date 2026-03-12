@@ -1,30 +1,30 @@
 {
   "candidates": [
     {
-      "code": "CN-7318-SCREWS",
-      "label": "Fasteners - screws and bolts (7318 family)",
+      "code": "7318 15",
+      "label": "Schrauben und Bolzen mit Gewinde, aus Eisen oder Stahl, auch mit dazugehörenden Muttern oder Unterlegscheiben",
       "familyMatches": ["schraube"],
       "keywords": ["schraube", "bolzen", "gewinde", "sechskant"],
       "materialHints": ["stahl", "edelstahl", "messing"],
-      "normHints": ["din 933", "din 912", "iso 4017"],
+      "normHints": ["din933", "din912", "iso4017"],
       "includeTokens": ["m", "gewinde"],
       "excludeTokens": ["mutter", "lager"],
       "dimensionRelevant": true
     },
     {
-      "code": "CN-7318-NUTS",
-      "label": "Fasteners - nuts (7318 family)",
+      "code": "7318 16",
+      "label": "Muttern, aus Eisen oder Stahl",
       "familyMatches": ["mutter"],
       "keywords": ["mutter", "sechskantmutter", "sicherungsmutter", "flanschmutter"],
       "materialHints": ["stahl", "edelstahl", "messing"],
-      "normHints": ["din 934", "iso 4032"],
+      "normHints": ["din934", "iso4032"],
       "includeTokens": ["m", "mutter"],
       "excludeTokens": ["schraube", "lager"],
       "dimensionRelevant": true
     },
     {
-      "code": "CN-8482-BEARINGS",
-      "label": "Rolling bearings (8482 family)",
+      "code": "8482",
+      "label": "Wälzlager \"Kugellager, Rollenlager und Nadellager\"; Teile davon",
       "familyMatches": ["lager"],
       "keywords": ["lager", "kugellager", "rollenlager", "nadellager", "skf", "fag"],
       "materialHints": ["stahl", "edelstahl"],
@@ -34,8 +34,8 @@
       "dimensionRelevant": true
     },
     {
-      "code": "CN-4016-ORING",
-      "label": "Vulcanized rubber seals - O-rings (4016 family)",
+      "code": "4016 93 00",
+      "label": "Dichtungen aus Weichkautschuk (ausg. aus Zellkautschuk)",
       "familyMatches": ["o_ring"],
       "keywords": ["o_ring", "oring", "dichtring"],
       "materialHints": ["nbr", "fkm", "epdm", "ptfe"],
@@ -45,8 +45,8 @@
       "dimensionRelevant": true
     },
     {
-      "code": "CN-4016-SHAFT-SEAL",
-      "label": "Shaft seals / radial shaft seal rings (4016 family)",
+      "code": "4016 93 00",
+      "label": "Dichtungen aus Weichkautschuk (ausg. aus Zellkautschuk)",
       "familyMatches": ["wellendichtring"],
       "keywords": ["wellendichtring", "simmerring", "radialwellendichtring", "rwdr"],
       "materialHints": ["nbr", "fkm", "ptfe"],
@@ -56,8 +56,19 @@
       "dimensionRelevant": true
     },
     {
-      "code": "CN-8501-MOTOR",
-      "label": "Electric motors and generators (8501 family)",
+      "code": "8484 20 00",
+      "label": "Dichtungen, mechanisch",
+      "familyMatches": ["wellendichtring"],
+      "keywords": ["mechanical seal", "gleitringdichtung"],
+      "materialHints": [],
+      "normHints": [],
+      "includeTokens": [],
+      "excludeTokens": ["o_ring"],
+      "dimensionRelevant": true
+    },
+    {
+      "code": "8501",
+      "label": "Elektromotoren und elektrische Generatoren (ausg. Stromerzeugungsaggregate)",
       "familyMatches": ["motor"],
       "keywords": ["motor", "servomotor", "asynchronmotor", "kw", "rpm"],
       "materialHints": [],
@@ -67,8 +78,8 @@
       "dimensionRelevant": false
     },
     {
-      "code": "CN-8501-GEARMOTOR",
-      "label": "Gearmotors / geared motor units (8501/8503 family)",
+      "code": "8501",
+      "label": "Elektromotoren und elektrische Generatoren (ausg. Stromerzeugungsaggregate)",
       "familyMatches": ["getriebemotor"],
       "keywords": ["getriebemotor", "gearmotor", "sew", "ka37", "r37"],
       "materialHints": [],
@@ -78,8 +89,8 @@
       "dimensionRelevant": false
     },
     {
-      "code": "CN-8483-SPROCKET",
-      "label": "Transmission parts - sprockets and chain wheels (8483 family)",
+      "code": "8483 90",
+      "label": "Zahnräder, Kettenräder und andere Kraftübertragungsvorrichtungen, gesondert gestellt; Teile von Maschinenwellen, Maschinengetrieben, Maschinenkupplungen und anderen Wellenkupplungen",
       "familyMatches": ["kettenrad"],
       "keywords": ["kettenrad", "ritzel", "sprocket", "zahnkranz"],
       "materialHints": ["stahl", "guss"],
@@ -89,19 +100,19 @@
       "dimensionRelevant": true
     },
     {
-      "code": "CN-8412-PNEU-CYLINDER",
-      "label": "Pneumatic power engines and motors - cylinders (8412 family)",
+      "code": "8412 31 00",
+      "label": "Druckluftmotoren, linear arbeitend \"Arbeitszylinder\", pneumatische",
       "familyMatches": ["pneumatikzylinder"],
       "keywords": ["pneumatikzylinder", "zylinder", "druckluft", "hub", "bar"],
       "materialHints": [],
-      "normHints": ["iso 15552"],
+      "normHints": ["iso15552"],
       "includeTokens": ["bar", "hub", "doppelwirkend"],
       "excludeTokens": ["hydraulik"],
       "dimensionRelevant": true
     },
     {
-      "code": "CN-UNSURE-MISC",
-      "label": "General mechanical parts - manual review needed",
+      "code": null,
+      "label": "Manuelle Prüfung erforderlich",
       "familyMatches": [],
       "keywords": ["ersatzteil", "bauteil", "komponente"],
       "materialHints": [],

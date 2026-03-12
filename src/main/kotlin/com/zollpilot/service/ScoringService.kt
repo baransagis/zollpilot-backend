@@ -19,13 +19,13 @@ class ScoringService {
 
                 if (normalizedFamily != null && candidate.familyMatches.contains(normalizedFamily)) {
                     score += 55
-                    reasons += "detected family '$normalizedFamily'"
+                    reasons += "erkannte KN-Familie '$normalizedFamily'"
                 }
 
                 val keywordOverlap = candidate.keywords.filter { keyword -> normalizedText.contains(keyword) }
                 if (keywordOverlap.isNotEmpty()) {
                     score += min(24.0, keywordOverlap.size * 6.0)
-                    reasons += "keyword overlap: ${keywordOverlap.take(4).joinToString(", ")}"
+                    reasons += "Keyword-Überschneidung: ${keywordOverlap.take(4).joinToString(", ")}"
                 }
 
                 val materialOverlap = candidate.materialHints.filter { material ->
@@ -33,7 +33,7 @@ class ScoringService {
                 }
                 if (materialOverlap.isNotEmpty()) {
                     score += min(15.0, materialOverlap.size * 5.0)
-                    reasons += "material hint: ${materialOverlap.joinToString(", ")}"
+                    reasons += "Materialhinweis: ${materialOverlap.joinToString(", ")}"
                 }
 
                 val normOverlap = candidate.normHints.filter { hint ->
@@ -41,28 +41,28 @@ class ScoringService {
                 }
                 if (normOverlap.isNotEmpty()) {
                     score += min(10.0, normOverlap.size * 4.0)
-                    reasons += "norm hint: ${normOverlap.joinToString(", ")}"
+                    reasons += "Normhinweis: ${normOverlap.joinToString(", ")}"
                 }
 
                 if (candidate.dimensionRelevant && attributes.dimensions.isNotEmpty()) {
                     score += 5.0
-                    reasons += "dimension pattern present"
+                    reasons += "Dimensionen vorhanden"
                 }
 
                 val includeHits = candidate.includeTokens.filter { token -> normalizedText.contains(token) }
                 if (includeHits.isNotEmpty()) {
                     score += min(9.0, includeHits.size * 3.0)
-                    reasons += "include token: ${includeHits.take(3).joinToString(", ")}"
+                    reasons += "Einschluss-Kriterium: ${includeHits.take(3).joinToString(", ")}"
                 }
 
                 val excludeHits = candidate.excludeTokens.filter { token -> normalizedText.contains(token) }
                 if (excludeHits.isNotEmpty()) {
                     score -= excludeHits.size * 18.0
-                    reasons += "exclude token hit: ${excludeHits.take(3).joinToString(", ")}"
+                    reasons += "Ausschluss-Kriterium-Treffer: ${excludeHits.take(3).joinToString(", ")}"
                 }
 
                 if (reasons.isEmpty()) {
-                    reasons += "low textual evidence"
+                    reasons += "Geringe textuelle Evidenz"
                 }
 
                 RankedCandidate(

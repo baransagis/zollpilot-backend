@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ZollPilot</title>
+  <link rel="stylesheet" href="/static/upload.css">
+</head>
+<body>
+  <main class="page">
+    <section class="panel">
+      <header class="hero">
+        <p class="eyebrow">ZollPilot</p>
+        <h1>CSV fur die KN-Klassifizierung hochladen</h1>
+        <p class="subtitle">Lade deine CSV hoch und erhalte klare CN/HS-Vorschläge.</p>
+      </header>
+
+      <section class="upload-block" aria-labelledby="uploadLabel">
+        <h2 id="uploadLabel">CSV-Upload</h2>
+
+        <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="CSV-Datei hier ablegen oder Dateiauswahl offnen">
+          <input id="fileInput" type="file" accept=".csv,text/csv" hidden>
+          <p class="drop-title">CSV-Datei hier ablegen</p>
+          <p class="drop-subtitle">oder klicken, um eine Datei auszuwählen</p>
+          <p id="selectedFile" class="file-name">Keine Datei ausgewählt</p>
+        </div>
+
+        <div class="actions">
+          <button id="uploadBtn" class="btn btn-primary" type="button">CSV hochladen</button>
+          <button id="clearBtn" class="btn btn-secondary" type="button">Zurücksetzen</button>
+        </div>
+
+        <p class="helper">Erforderliche Spalten: <strong>Materialnummer</strong>, <strong>Kurztext</strong>, <strong>Einkaufsbestelltext</strong>. Trennzeichen kann <code>;</code> oder <code>,</code> sein.</p>
+        <p id="status" class="status" aria-live="polite">Wähle eine CSV-Datei, um zu starten.</p>
+      </section>
+
+      <section id="summarySection" class="summary" hidden>
+        <h2>Upload-Zusammenfassung</h2>
+        <div class="summary-grid">
+          <article class="summary-item">
+            <p class="summary-label">Datei</p>
+            <p id="summaryFile" class="summary-value">-</p>
+          </article>
+          <article class="summary-item">
+            <p class="summary-label">Gefundene Zeilen</p>
+            <p id="summaryRows" class="summary-value">0</p>
+          </article>
+          <article class="summary-item">
+            <p class="summary-label">Durchschnittliche Confidence</p>
+            <p id="summaryConfidence" class="summary-value">0%</p>
+          </article>
+          <article class="summary-item">
+            <p class="summary-label">Status</p>
+            <p id="summaryState" class="summary-value">-</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="resultsSection" class="results" hidden>
+        <h2>Klassifizierungsergebnisse</h2>
+        <div id="resultsGrid" class="results-grid"></div>
+      </section>
+
+      <section id="emptyState" class="empty-state">
+        <h2>Noch keine Ergebnisse</h2>
+        <p>Lade eine CSV-Datei hoch, um zeilenweise Ergebnisse zu sehen.</p>
+      </section>
+    </section>
+  </main>
+
+  <script src="/static/upload.js" defer></script>
+</body>
+</html>

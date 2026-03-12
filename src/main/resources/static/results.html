@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CN Candidate Results</title>
+  <title>KN-Kandidatenergebnisse</title>
   <style>
     :root {
       --bg-top: #f5f8fb;
@@ -530,13 +530,13 @@
   <main class="app">
     <section class="hero">
       <div>
-        <p class="eyebrow">CN/HS Candidate PoC</p>
-        <h1>Resource CSV Classification Results</h1>
-        <p>Human-friendly view of <code>GET /test-resource-csv</code> with candidate ranking, confidence, extracted attributes, and missing information hints.</p>
+        <p class="eyebrow">CN/HS-Kandidaten-PoC</p>
+        <h1>Klassifizierungsergebnisse aus Ressourcen-CSV</h1>
+        <p>Benutzerfreundliche Ansicht von <code>GET /test-resource-csv</code> mit Kandidaten-Ranking, Confidence, extrahierten Merkmalen und Hinweisen zu fehlenden Informationen.</p>
       </div>
       <div class="hero-actions">
-        <button id="reloadBtn" class="btn" type="button">Reload Results</button>
-        <p id="lastRefresh" class="meta">Last refresh: -</p>
+        <button id="reloadBtn" class="btn" type="button">Ergebnisse neu laden</button>
+        <p id="lastRefresh" class="meta">Letzte Aktualisierung: -</p>
       </div>
     </section>
 
@@ -544,21 +544,21 @@
 
     <section class="controls">
       <label class="control">
-        Search
-        <input id="searchInput" type="search" placeholder="material number, text, family, candidate code">
+        Suche
+        <input id="searchInput" type="search" placeholder="Materialnummer, Text, Familie, Kandidatencode">
       </label>
       <label class="control">
         Confidence
         <select id="confidenceFilter">
-          <option value="all">All</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
+          <option value="all">Alle</option>
+          <option value="high">Hoch</option>
+          <option value="medium">Mittel</option>
+          <option value="low">Niedrig</option>
         </select>
       </label>
     </section>
 
-    <p id="status" class="status">Waiting for first load...</p>
+    <p id="status" class="status">Warten auf erste Ladung ...</p>
 
     <section id="results" class="results" aria-live="polite"></section>
   </main>
@@ -610,7 +610,7 @@
 
       function chips(values) {
         if (!Array.isArray(values) || values.length === 0) {
-          return '<span class="chip empty">n/a</span>';
+          return '<span class="chip empty">k. A.</span>';
         }
 
         return values
@@ -621,13 +621,13 @@
 
       function renderSummary(allRows, shownRows) {
         const confidenceCount = shownRows.reduce((acc, row) => {
-          const key = (row.confidence || "unknown").toLowerCase();
+          const key = (row.confidence || "unbekannt").toLowerCase();
           acc[key] = (acc[key] || 0) + 1;
           return acc;
         }, {});
 
         const familyCount = shownRows.reduce((acc, row) => {
-          const key = row.normalizedFamily || "unknown";
+          const key = row.normalizedFamily || "unbekannt";
           acc[key] = (acc[key] || 0) + 1;
           return acc;
         }, {});
@@ -642,13 +642,13 @@
               .reduce((sum, value) => sum + value, 0) / shownRows.length;
 
         const cards = [
-          ["Rows Loaded", allRows.length],
-          ["Rows Shown", shownRows.length],
-          ["High Confidence", confidenceCount.high || 0],
-          ["Medium Confidence", confidenceCount.medium || 0],
-          ["Low Confidence", confidenceCount.low || 0],
-          ["Top Family", topFamily ? `${topFamily[0]} (${topFamily[1]})` : "n/a"],
-          ["Avg Top Score", `${avgTopScore.toFixed(1)}`]
+          ["Geladene Zeilen", allRows.length],
+          ["Angezeigte Zeilen", shownRows.length],
+          ["Hohe Confidence", confidenceCount.high || 0],
+          ["Mittlere Confidence", confidenceCount.medium || 0],
+          ["Niedrige Confidence", confidenceCount.low || 0],
+          ["Top-Familie", topFamily ? `${topFamily[0]} (${topFamily[1]})` : "k. A."],
+          ["Durchschn. Top-Score", `${avgTopScore.toFixed(1)}`]
         ];
 
         refs.summary.innerHTML = cards
@@ -672,8 +672,13 @@
 
       function buildCard(row, index) {
         const confidence = String(row.confidence || "low").toLowerCase();
-        const family = row.normalizedFamily || "unknown";
+        const family = row.normalizedFamily || "unbekannt";
         const topCandidate = row.candidates?.[0];
+        const confidenceLabel = confidence === "high"
+          ? "Hoch"
+          : confidence === "medium"
+            ? "Mittel"
+            : "Niedrig";
 
         const candidatesHtml = Array.isArray(row.candidates) && row.candidates.length > 0
           ? row.candidates.map((candidate) => {
@@ -681,21 +686,21 @@
               return `
                 <li class="candidate-item">
                   <div class="candidate-row">
-                    <strong>${escapeHtml(candidate.code || "n/a")}</strong>
+                    <strong>${escapeHtml(candidate.code || "k. A.")}</strong>
                     <span class="score">${formatScore(candidate.score)}</span>
                   </div>
                   <div class="bar"><span style="width:${clampScore(candidate.score)}%"></span></div>
                   <p class="candidate-label">${escapeHtml(candidate.label || "")}</p>
-                  <p class="candidate-reasons">${reasons.map(escapeHtml).join(" | ") || "No reasons provided"}</p>
+                  <p class="candidate-reasons">${reasons.map(escapeHtml).join(" | ") || "Keine Begrundungen vorhanden"}</p>
                 </li>
               `;
             }).join("")
-          : '<li class="candidate-item"><p class="muted">No candidates returned.</p></li>';
+          : '<li class="candidate-item"><p class="muted">Keine Kandidaten zuruckgegeben.</p></li>';
 
         const missing = Array.isArray(row.missingInformation) ? row.missingInformation : [];
         const missingHtml = missing.length > 0
           ? missing.map((item) => `<li class="missing-item">${escapeHtml(item)}</li>`).join("")
-          : '<li class="missing-item">No additional missing information flagged.</li>';
+          : '<li class="missing-item">Keine zusatzlichen fehlenden Informationen markiert.</li>';
 
         const attributes = row.attributes || {};
 
@@ -703,41 +708,41 @@
           <article class="result-card" style="--delay: ${index * 36}ms;">
             <header class="head">
               <div>
-                <h2>${escapeHtml(row.shortText || "(no short text)")}</h2>
-                <p class="material-number">Material ${escapeHtml(row.materialNumber || "n/a")}</p>
+                <h2>${escapeHtml(row.shortText || "(kein Kurztext)")}</h2>
+                <p class="material-number">Material ${escapeHtml(row.materialNumber || "k. A.")}</p>
               </div>
-              <span class="badge ${escapeHtml(confidence)}">${escapeHtml(confidence)}</span>
+              <span class="badge ${escapeHtml(confidence)}">${escapeHtml(confidenceLabel)}</span>
             </header>
 
             <div class="chips">
-              <span class="chip">Family: ${escapeHtml(family)}</span>
-              <span class="chip">Top: ${escapeHtml(topCandidate?.code || "n/a")}</span>
-              <span class="chip">Top score: ${formatScore(topCandidate?.score || 0)}</span>
+              <span class="chip">Familie: ${escapeHtml(family)}</span>
+              <span class="chip">Top: ${escapeHtml(topCandidate?.code || "k. A.")}</span>
+              <span class="chip">Top-Score: ${formatScore(topCandidate?.score || 0)}</span>
             </div>
 
             <p class="muted">${escapeHtml(row.purchaseText || "")}</p>
 
             <details>
-              <summary>Normalized text</summary>
+              <summary>Normalisierter Text</summary>
               <code>${escapeHtml(row.normalizedText || "")}</code>
             </details>
 
             <section class="candidates">
-              <h3>Top Candidates</h3>
+              <h3>Top-Kandidaten</h3>
               <ul class="candidate-list">${candidatesHtml}</ul>
             </section>
 
             <section class="attr-grid">
-              ${attributeSection("Dimensions", attributes.dimensions)}
-              ${attributeSection("Norms", attributes.norms)}
-              ${attributeSection("Material hints", attributes.materialHints)}
-              ${attributeSection("Hardness hints", attributes.hardnessHints)}
-              ${attributeSection("Model tokens", attributes.modelTokens)}
-              ${attributeSection("Surface hints", attributes.surfaceHints)}
+              ${attributeSection("Abmessungen", attributes.dimensions)}
+              ${attributeSection("Normen", attributes.norms)}
+              ${attributeSection("Materialhinweise", attributes.materialHints)}
+              ${attributeSection("Haertehinweise", attributes.hardnessHints)}
+              ${attributeSection("Modell-Tokens", attributes.modelTokens)}
+              ${attributeSection("Oberflachenhinweise", attributes.surfaceHints)}
             </section>
 
             <section class="missing">
-              <h3>Missing Information</h3>
+              <h3>Fehlende Informationen</h3>
               <ul class="missing-list">${missingHtml}</ul>
             </section>
           </article>
@@ -746,7 +751,7 @@
 
       function renderResults(rows) {
         if (rows.length === 0) {
-          refs.results.innerHTML = '<div class="empty-state">No rows match the current filters.</div>';
+          refs.results.innerHTML = '<div class="empty-state">Keine Zeilen entsprechen den aktuellen Filtern.</div>';
           return;
         }
 
@@ -792,7 +797,7 @@
       async function loadData() {
         refs.reloadBtn.disabled = true;
         showLoading();
-        setStatus(`Loading data from ${endpoint} ...`);
+        setStatus(`Daten von ${endpoint} werden geladen ...`);
 
         try {
           const response = await fetch(endpoint, {
@@ -807,20 +812,20 @@
 
           const payload = await response.json();
           if (!Array.isArray(payload)) {
-            throw new Error("Endpoint did not return a JSON array.");
+            throw new Error("Der Endpunkt hat kein JSON-Array zuruckgegeben.");
           }
 
           state.rows = payload;
           applyFilters();
 
           const now = new Date();
-          refs.lastRefresh.textContent = `Last refresh: ${now.toLocaleString()}`;
-          setStatus(`Loaded ${state.rows.length} rows from ${endpoint}.`, "ok");
+          refs.lastRefresh.textContent = `Letzte Aktualisierung: ${now.toLocaleString()}`;
+          setStatus(`${state.rows.length} Zeilen von ${endpoint} geladen.`, "ok");
         } catch (error) {
           refs.summary.innerHTML = "";
-          refs.results.innerHTML = '<div class="empty-state">Could not load data. Check backend status and endpoint path.</div>';
+          refs.results.innerHTML = '<div class="empty-state">Daten konnten nicht geladen werden. Bitte Backend-Status und Endpunktpfad prufen.</div>';
           const message = error instanceof Error ? error.message : String(error);
-          setStatus(`Failed to load results: ${message}`, "error");
+          setStatus(`Ergebnisse konnten nicht geladen werden: ${message}`, "error");
         } finally {
           refs.reloadBtn.disabled = false;
         }

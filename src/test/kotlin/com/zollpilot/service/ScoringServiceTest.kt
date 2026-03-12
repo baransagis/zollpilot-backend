@@ -63,6 +63,6 @@ class ScoringServiceTest {
             normalizedText = "schraube mutter set",
         )
 
-        assertTrue(ranked.first().reasons.any { it.contains("exclude token") })
+        assertTrue(ranked.first().reasons.any { it.contains("Ausschluss-Kriterium") })
     }
 }

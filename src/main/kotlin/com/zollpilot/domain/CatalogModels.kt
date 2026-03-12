@@ -22,7 +22,7 @@ data class CandidateCatalog(
 
 @Serializable
 data class CandidateDefinition(
-    val code: String,
+    val code: String?,
     val label: String,
     val familyMatches: List<String> = emptyList(),
     val keywords: List<String> = emptyList(),

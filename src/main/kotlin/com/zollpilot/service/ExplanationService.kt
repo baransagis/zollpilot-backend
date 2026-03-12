@@ -14,35 +14,35 @@ class ExplanationService {
         val missing = linkedSetOf<String>()
 
         if (normalizedFamily == null) {
-            missing += "No clear product family detected."
+            missing += "Keine eindeutige Produktfamilie erkannt."
         }
 
         if (attributes.materialHints.isEmpty()) {
-            missing += "Material hint missing (e.g., steel, inox, NBR, FKM)."
+            missing += "Materialhinweis fehlt (z. B. Stahl, Inox, NBR, FKM)."
         }
 
         if (normalizedFamily in dimensionSensitiveFamilies && attributes.dimensions.isEmpty()) {
-            missing += "Dimensions missing for this family."
+            missing += "Dimensionen für diese Familie fehlen."
         }
 
         if (normalizedFamily in normSensitiveFamilies && attributes.norms.isEmpty()) {
-            missing += "Norm reference missing (e.g., DIN or ISO)."
+            missing += "Normreferenz fehlt (z. B. DIN oder ISO)."
         }
 
         val top = rankedCandidates.firstOrNull()
         val second = rankedCandidates.getOrNull(1)
 
         if (top == null) {
-            missing += "No catalog candidate matched clearly."
+            missing += "Kein KN-Kandidat passt eindeutig."
             return missing.toList()
         }
 
         if (top.score < 45.0) {
-            missing += "Provide manufacturer/model details to improve confidence."
+            missing += "Hersteller- oder Modelldetails angeben, um die Confidence zu verbessern."
         }
 
         if (second != null && abs(top.score - second.score) < 8.0) {
-            missing += "Top candidates are close in score; more specification needed."
+            missing += "Top-Kandidaten liegen beim Score nah beieinander; mehr Spezifikation erforderlich."
         }
 
         return missing.toList()

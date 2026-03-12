@@ -11,7 +11,7 @@ class CsvParser {
     fun parse(inputStream: InputStream): List<MaterialInput> {
         val raw = inputStream.bufferedReader().use { it.readText() }
         if (raw.isBlank()) {
-            throw CsvParsingException("CSV content is empty.")
+            throw CsvParsingException("Der CSV-Inhalt ist leer.")
         }
 
         val delimiter = chooseDelimiter(raw)
@@ -19,7 +19,7 @@ class CsvParser {
             .filter { row -> row.any { it.isNotBlank() } }
 
         if (records.isEmpty()) {
-            throw CsvParsingException("CSV content is empty.")
+            throw CsvParsingException("Der CSV-Inhalt ist leer.")
         }
 
         val header = records.first().mapIndexed { index, column ->
@@ -29,7 +29,7 @@ class CsvParser {
         val headerIndex = header.withIndex().associate { it.value to it.index }
         val missingColumns = requiredColumns.filterNot { headerIndex.containsKey(it) }
         if (missingColumns.isNotEmpty()) {
-            throw CsvParsingException("Missing required CSV columns: ${missingColumns.joinToString(", ")}")
+            throw CsvParsingException("Erforderliche CSV-Spalten fehlen: ${missingColumns.joinToString(", ")}")
         }
 
         val materialNumberIdx = headerIndex.getValue("Materialnummer")
@@ -59,7 +59,7 @@ class CsvParser {
         }
 
         if (rows.isEmpty()) {
-            throw CsvParsingException("CSV has no data rows.")
+            throw CsvParsingException("Die CSV enthält keine Datenzeilen.")
         }
 
         return rows
