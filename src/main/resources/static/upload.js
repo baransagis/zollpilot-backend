@@ -2,6 +2,7 @@
   const endpoint = "/api/v1/classify/upload-csv";
   const llmStartEndpoint = "/api/v1/classify/start-llm";
   const llmStatusEndpoint = "/api/v1/classify/llm-status";
+  const themeStorageKey = "zollpilot-theme";
 
   const refs = {
     dropzone: document.getElementById("dropzone"),
@@ -27,7 +28,8 @@
     resultsConfidenceFilter: document.getElementById("resultsConfidenceFilter"),
     resultsSection: document.getElementById("resultsSection"),
     resultsGrid: document.getElementById("resultsGrid"),
-    topRow: document.querySelector(".top-row")
+    topRow: document.querySelector(".top-row"),
+    themeToggle: document.getElementById("themeToggle")
   };
 
   const state = {
@@ -40,8 +42,50 @@
     llmStarting: false,
     llmJobId: null,
     llmPollTimer: null,
-    llmPollStartedAt: null
+    llmPollStartedAt: null,
+    theme: "dark"
   };
+
+  function normalizeTheme(value) {
+    return String(value).toLowerCase() === "light" ? "light" : "dark";
+  }
+
+  function applyTheme(theme) {
+    const nextTheme = normalizeTheme(theme);
+    state.theme = nextTheme;
+    document.body.dataset.theme = nextTheme;
+    if (refs.themeToggle) {
+      refs.themeToggle.setAttribute("aria-pressed", String(nextTheme === "light"));
+      refs.themeToggle.textContent = nextTheme === "light" ? "Dunkelmodus" : "Hellmodus";
+    }
+  }
+
+  function initTheme() {
+    let initialTheme = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+
+    try {
+      const savedTheme = localStorage.getItem(themeStorageKey);
+      if (savedTheme) {
+        initialTheme = normalizeTheme(savedTheme);
+      }
+    } catch (_) {
+      // ignore storage errors and keep the fallback theme
+    }
+
+    applyTheme(initialTheme);
+  }
+
+  function toggleTheme() {
+    const nextTheme = state.theme === "light" ? "dark" : "light";
+    applyTheme(nextTheme);
+    try {
+      localStorage.setItem(themeStorageKey, nextTheme);
+    } catch (_) {
+      // ignore storage errors (private mode / blocked storage)
+    }
+  }
 
   function setStatus(message, kind = "") {
     refs.status.textContent = message;
@@ -854,6 +898,9 @@
   refs.exportBtn.addEventListener("click", exportCsv);
   refs.clearBtn.addEventListener("click", clearAll);
   refs.startLlmBtn.addEventListener("click", startLlmEnrichment);
+  if (refs.themeToggle) {
+    refs.themeToggle.addEventListener("click", toggleTheme);
+  }
 
   refs.filterHighBtn.addEventListener("click", () => {
     if (state.rows.length === 0) return;
@@ -875,5 +922,6 @@
     state.rows[rowIndex].manualClassification = target.value;
   });
 
+  initTheme();
   clearResults();
 })();

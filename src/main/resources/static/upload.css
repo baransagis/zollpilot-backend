@@ -3,6 +3,8 @@
   --surface: #16181c;
   --surface2: #1e2128;
   --border: #2a2d35;
+  --topbar-bg: rgba(14, 15, 17, 0.8);
+  --grid-line: rgba(249, 115, 22, 0.03);
   --orange: #f97316;
   --orange-dim: rgba(249, 115, 22, 0.12);
   --green: #22c55e;
@@ -12,8 +14,52 @@
   --red-dim: rgba(239, 68, 68, 0.1);
   --text: #e8eaf0;
   --muted: #6b7280;
+  --status-loading-border: rgba(94, 132, 190, 0.45);
+  --status-loading-text: #b8d8ff;
+  --status-loading-bg: rgba(76, 116, 170, 0.13);
+  --result-gradient-top: #1b1e24;
+  --result-gradient-bottom: #171a20;
+  --field-bg: rgba(30, 33, 40, 0.5);
+  --candidate-bg: rgba(30, 33, 40, 0.7);
+  --input-bg: rgba(30, 33, 40, 0.7);
+  --llm-block-border: rgba(249, 115, 22, 0.35);
+  --llm-block-bg: rgba(249, 115, 22, 0.08);
+  --llm-secondary-text: #d9dde7;
+  --scrollbar-track: #16181c;
+  --scrollbar-thumb: #2a2d35;
   --mono: "DM Mono", monospace;
   --sans: "Syne", sans-serif;
+}
+
+body[data-theme="light"] {
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --surface2: #eef3fa;
+  --border: #ced8e6;
+  --topbar-bg: rgba(244, 247, 251, 0.86);
+  --grid-line: rgba(15, 45, 66, 0.05);
+  --orange: #ea580c;
+  --orange-dim: rgba(234, 88, 12, 0.12);
+  --green: #15803d;
+  --green-dim: rgba(21, 128, 61, 0.12);
+  --yellow: #b45309;
+  --red: #b91c1c;
+  --red-dim: rgba(185, 28, 28, 0.1);
+  --text: #1a2433;
+  --muted: #5b6b80;
+  --status-loading-border: #aac7e6;
+  --status-loading-text: #285d8f;
+  --status-loading-bg: #e8f2fc;
+  --result-gradient-top: #ffffff;
+  --result-gradient-bottom: #f6f9ff;
+  --field-bg: #f8fbff;
+  --candidate-bg: #f7faff;
+  --input-bg: #ffffff;
+  --llm-block-border: rgba(234, 88, 12, 0.28);
+  --llm-block-bg: rgba(234, 88, 12, 0.08);
+  --llm-secondary-text: #344357;
+  --scrollbar-track: #e9edf4;
+  --scrollbar-thumb: #bec9d9;
 }
 
 * {
@@ -28,6 +74,11 @@ body {
   font-family: var(--sans);
   min-height: 100vh;
   overflow-x: hidden;
+  color-scheme: dark;
+}
+
+body[data-theme="light"] {
+  color-scheme: light;
 }
 
 body::before {
@@ -35,8 +86,8 @@ body::before {
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(249, 115, 22, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(249, 115, 22, 0.03) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
   pointer-events: none;
   z-index: 0;
@@ -52,7 +103,7 @@ body::before {
   justify-content: space-between;
   gap: 14px;
   backdrop-filter: blur(8px);
-  background: rgba(14, 15, 17, 0.8);
+  background: var(--topbar-bg);
 }
 
 .logo {
@@ -84,6 +135,37 @@ body::before {
 
 .logo-text span {
   color: var(--orange);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface2);
+  color: var(--text);
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  border-color: var(--orange);
+  color: var(--orange);
+  outline: none;
+}
+
+.theme-toggle[aria-pressed="true"] {
+  border-color: var(--orange);
+  background: var(--orange-dim);
 }
 
 .header-badge {
@@ -323,9 +405,9 @@ main {
 }
 
 .status.loading {
-  border-color: rgba(94, 132, 190, 0.45);
-  color: #b8d8ff;
-  background: rgba(76, 116, 170, 0.13);
+  border-color: var(--status-loading-border);
+  color: var(--status-loading-text);
+  background: var(--status-loading-bg);
 }
 
 .status.ok {
@@ -508,7 +590,7 @@ main {
 .result-card {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: linear-gradient(180deg, #1b1e24, #171a20);
+  background: linear-gradient(180deg, var(--result-gradient-top), var(--result-gradient-bottom));
   padding: 14px;
   display: grid;
   gap: 12px;
@@ -530,7 +612,7 @@ main {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 9px;
-  background: rgba(30, 33, 40, 0.5);
+  background: var(--field-bg);
 }
 
 .field-label {
@@ -554,7 +636,7 @@ main {
 .confidence-box {
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: rgba(30, 33, 40, 0.5);
+  background: var(--field-bg);
   padding: 10px;
 }
 
@@ -612,7 +694,7 @@ main {
 .candidate {
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: rgba(30, 33, 40, 0.7);
+  background: var(--candidate-bg);
   padding: 8px;
 }
 
@@ -672,7 +754,7 @@ main {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: rgba(30, 33, 40, 0.7);
+  background: var(--input-bg);
   color: var(--text);
   font-family: var(--mono);
   font-size: 13px;
@@ -690,9 +772,9 @@ main {
 }
 
 .llm-block {
-  border: 1px solid rgba(249, 115, 22, 0.35);
+  border: 1px solid var(--llm-block-border);
   border-radius: 10px;
-  background: rgba(249, 115, 22, 0.08);
+  background: var(--llm-block-bg);
   padding: 10px;
   display: grid;
   gap: 8px;
@@ -716,7 +798,7 @@ main {
 
 .llm-explanation {
   margin: 0;
-  color: #d9dde7;
+  color: var(--llm-secondary-text);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -724,7 +806,7 @@ main {
 .llm-candidates {
   margin: 0;
   padding-left: 18px;
-  color: #d9dde7;
+  color: var(--llm-secondary-text);
   font-size: 12px;
   display: grid;
   gap: 6px;
@@ -739,7 +821,7 @@ main {
 
 .llm-loading {
   margin: 0;
-  color: #d9dde7;
+  color: var(--llm-secondary-text);
   font-size: 12px;
   font-family: var(--mono);
   display: flex;
@@ -750,7 +832,7 @@ main {
 .spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(249, 115, 22, 0.28);
+  border: 2px solid var(--llm-block-border);
   border-top-color: var(--orange);
   border-radius: 999px;
   animation: spin 0.9s linear infinite;
@@ -770,11 +852,11 @@ main {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--surface);
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
@@ -801,6 +883,11 @@ main {
   .topbar {
     padding: 16px 18px;
     flex-wrap: wrap;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .header-badge {
